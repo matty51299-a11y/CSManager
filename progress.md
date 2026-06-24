@@ -614,3 +614,36 @@ Add richer event-format support for non-16-team events and persist deeper player
 
 #### Next Recommended Task
 - Run a browser/manual pass through the specified MOUZ BLAST Bounty path, then tune exact spacing and bracket connector lines from live screenshots if needed.
+
+### Task 12 — COD-Style Global UI Overhaul (Complete)
+
+- Completed a global visual theme overhaul using shared CSS variables for the dark navy cockpit background, slate glass panels, blue-grey borders, cyan/teal accents, green user-team highlights, danger/warning colours, panel shadows and reusable radii.
+- Restyled the normal app shell and sidebar into a compact premium cockpit with a CS brand mark, selected team/date card, icon-led navigation, active cyan indicator, hover glow and phase footer.
+- Rebuilt the Dashboard visually around a command hero strip, career control panel, team hub, VRS rankings card and compact calendar intel cards so it no longer reads as a generic dark admin page.
+- Restyled shared cards/panels through global panel, stat-card and table rules with darker fills, inner contrast, compact padding, uppercase labels and stronger hover states.
+- Restyled tables globally for Teams, Players, Rankings, Calendar, Squad, Diagnostics and other data-heavy screens with dense rows, subtle alternating tones, thin separators, cyan links and clearer user-team/player highlighting.
+- Restyled buttons and controls globally with cyan/teal primary gradients, dark secondary/ghost styles, tighter radii, compact sizing and disabled states.
+- Restyled badges/pills globally for tiers, status, roles, movement and user-team context using green/amber/red/cyan/muted colour semantics.
+- Restyled the Event Ready modal into a premium glass broadcast card with stronger backdrop dimming, event information grid and clearer primary/secondary actions.
+- Aligned the full-screen Event Overlay theme variables with the new global palette while preserving the existing full-screen layout, hidden normal sidebar, left match rail, open centre canvas and right sidebar structure.
+
+#### Files Modified
+- src/index.css
+- src/components/Sidebar.jsx
+- src/pages/Dashboard.jsx
+- progress.md
+
+#### Known Limitations
+- This pass focuses on global styling and the highest-traffic screens; exact pixel parity with the COD Manager reference may still need a browser screenshot tuning pass.
+- Calendar remains card-based rather than a fully graphical calendar timeline.
+- Playoff bracket connectors in the event overlay remain card-column based from the prior overlay implementation.
+- No transfers, contracts, morale, scouting, spreadsheet importer, match simulation or dynamic VRS logic was intentionally changed.
+
+#### Manual Testing Results
+1. `npm run build` passes. Vite reports the existing large chunk advisory after building successfully.
+2. `npm run lint` passes with one pre-existing warning in `src/state/GameStateContext.jsx` about a no-useless-fallback spread.
+3. `npm run dev -- --host 127.0.0.1` starts successfully and the app root responds with HTTP 200 via `curl -I http://127.0.0.1:5173/`.
+4. Full interactive browser/manual flow is still recommended for final visual spacing verification: reset career, select NAVI or MOUZ, advance to BLAST Bounty Season 1, inspect the Event Ready modal, enter Event Overlay, simulate matches, finish event and confirm VRS updates.
+
+#### Next Recommended Task
+Run a browser screenshot pass through the requested NAVI/MOUZ BLAST Bounty flow and tune fine spacing, exact table density and overlay bracket connector polish from live screenshots.
