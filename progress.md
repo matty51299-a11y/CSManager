@@ -447,7 +447,6 @@ Add post-event ranking movement and persistent ranking table updates using the n
 - Added dedicated overlay CSS with navy/blue-black grid background, glass panels, compact broadcast typography, cyan/green user-team highlighting and responsive full-screen layout rules.
 
 #### Files Created
-- src/pages/EventOverlay.jsx
 - src/components/event/EventHeader.jsx
 - src/components/event/EventTabs.jsx
 - src/components/event/EventMatchRail.jsx
@@ -584,3 +583,34 @@ Add richer event-format support for non-16-team events and persist deeper player
 
 #### Next Recommended Task
 Add richer event-format support for non-16-team events and persist deeper player/team career histories from event stats while keeping the cleaned full-screen event mode intact.
+
+### Task 7 — COD-Reference Event Overlay Rebuild (Complete)
+
+- Event Overlay restyled to closely match the supplied COD Manager reference while keeping Counter-Strike event logic, teams, maps and Swiss/playoff systems intact.
+- Overview clutter removed: the large central Swiss qualification race board, record pool blocks and dashboard-style standings/stat panels no longer render on the Overview tab.
+- Centre canvas opened up for bracket/path presentation with a dark grid/glow background, a minimal user Swiss path lane at event start and a spacious playoff bracket area once playoffs begin.
+- Swiss details moved to the Swiss tab, including record pools, qualified teams, eliminated teams and full Swiss status context.
+- Stats moved to the Stats tab, with event player leaders and performance lines kept out of the Overview layout.
+- Placements moved to the Placements tab, keeping prize/finish information out of the main event canvas.
+- Colour theme updated with event-specific CSS variables for dark navy background, slate panels, blue-grey borders, cyan/teal accents, green user-team highlights, warning and danger colours.
+- Left match rail was rebuilt visually around compact COD-style stacked match cards, with seed/rank, team names, user highlight, YOU badge, status text and completed scores.
+- Right sidebar was kept as compact stacked cards for My Team, Current Match, Map Pool Preview, latest results and path/prize context.
+- Map Pool Preview now uses compact Counter-Strike-specific edge rows for overall, map pool, AWP, entry and form, plus projected maps.
+- User path made clearer through a dedicated path component showing current record, next opponent, latest result and win/loss implications.
+- Top action strip remains the single primary action area for simming user match, simming other matches, advancing rounds, generating playoffs and finishing events.
+
+#### Files Modified
+- src/components/event/EventMainPanel.jsx
+- src/components/event/EventMapPoolPreview.jsx
+- src/components/event/EventCanvas.jsx
+- src/components/event/EventUserPath.jsx
+- src/index.css
+- progress.md
+
+#### Known Limitations
+- The manual visual path was validated through build/static inspection in this environment; an interactive browser run is still recommended to verify exact pixel spacing against the screenshots.
+- Playoff bracket connectors remain card-column based rather than fully drawn connector lines.
+- Event-wide stats are still based on existing simulated match aggregation and are not yet a deeper persistent event stat database.
+
+#### Next Recommended Task
+- Run a browser/manual pass through the specified MOUZ BLAST Bounty path, then tune exact spacing and bracket connector lines from live screenshots if needed.
