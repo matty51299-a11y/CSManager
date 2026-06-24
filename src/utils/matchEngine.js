@@ -31,11 +31,15 @@ function makePlayerStats(players, won, teamStrength, opponentStrength, seed) {
     return {
       playerId: player.playerId,
       gamertag: player.gamertag,
+      teamId: player.teamId,
       kills,
       deaths,
+      assists: clamp(Math.round(kills * 0.28 + seededNoise(`${seed}-as-${player.playerId}`) * 5), 1, 12),
+      ADR: Math.round(clamp(42 + kills * 2.7 + seededNoise(`${seed}-adr-${player.playerId}`) * 18, 45, 115)),
       rating: Math.round(clamp(0.65 + kills / Math.max(1, deaths) * 0.35 + (won ? 0.08 : 0), 0.65, 1.75) * 100) / 100,
       openingKills: clamp(Math.round(Number(player.entry || 70) / 22 + seededNoise(`${seed}-op-${player.playerId}`) * 3), 0, 8),
       clutches: clamp(Math.round((Number(player.clutch || 70) - 60) / 22 + seededNoise(`${seed}-cl-${player.playerId}`) * 2), 0, 5),
+      headshotPercentage: Math.round(clamp(36 + Number(player.aim || 70) / 3.5 + seededNoise(`${seed}-hs-${player.playerId}`) * 16, 35, 75)),
     };
   });
 }
@@ -72,10 +76,17 @@ export function simulateMatch({ teamA, teamB, players = [], teamMapRatings = [],
     maps.push({
       mapKey: map.key,
       mapName: map.name,
+      winner,
+      loser: winner.teamId === teamA.teamId ? teamB : teamA,
       winnerTeamId: winner.teamId,
       winnerName: winner.shortName || winner.name,
+      score: `${score.winner === 'A' ? score.winnerRounds : score.loserRounds}-${score.winner === 'B' ? score.winnerRounds : score.loserRounds}`,
+      teamARounds: score.winner === 'A' ? score.winnerRounds : score.loserRounds,
+      teamBRounds: score.winner === 'B' ? score.winnerRounds : score.loserRounds,
       scoreA: score.winner === 'A' ? score.winnerRounds : score.loserRounds,
       scoreB: score.winner === 'B' ? score.winnerRounds : score.loserRounds,
+      halfScore: `${Math.floor((score.winner === 'A' ? score.winnerRounds : score.loserRounds) / 2)}-${Math.floor((score.winner === 'B' ? score.winnerRounds : score.loserRounds) / 2)}`,
+      overtime: score.winnerRounds > 13,
       teamAStats,
       teamBStats,
       performers: selectPerformers([...teamAStats, ...teamBStats]),

@@ -1,13 +1,14 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { OvrBadge } from '../components/StatBadge';
-import { formatMoney, tierBadgeClass, monthIndex } from '../utils/helpers';
+import { formatMoney, tierBadgeClass } from '../utils/helpers';
+import { compareDate, formatDate } from '../utils/calendarDates';
 
 export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, resetCareer }) {
   const navigate = useNavigate();
   const myTeam = gameState.teams.find((t) => t.teamId === gameState.selectedTeamId);
   const myPlayers = gameState.players.filter((p) => p.teamId === gameState.selectedTeamId && p.status === 'active');
   const topTeams = [...gameState.teams].sort((a, b) => a.ranking - b.ranking).slice(0, 10);
-  const nextEvents = [...gameState.events].sort((a, b) => monthIndex(a.month) - monthIndex(b.month));
+  const nextEvents = [...gameState.events].sort((a, b) => compareDate(a.startDate, b.startDate));
   const completedIds = new Set(gameState.completedEvents.map((e) => e.eventId));
   const nextEvent = nextEvents.find((e) => !completedIds.has(e.eventId));
   const starPlayer = [...myPlayers].sort((a, b) => b.overall - a.overall)[0];
@@ -17,7 +18,7 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
     <div>
       <div className="page-header">
         <h1>Dashboard</h1>
-        <div className="subtitle">Season {gameState.season} — Week {gameState.week} — Data: {gameState.dataSource}</div>
+        <div className="subtitle">Current date: {gameState.currentDateLabel} — Data: {gameState.dataSource}</div>
       </div>
 
       <div className="grid-4" style={{ marginBottom: 16 }}>
@@ -39,7 +40,7 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
         </div>
       </div>
 
-      <div className="panel cockpit-panel"><div className="panel-header"><h2>Career Control</h2><button className="ghost-button" onClick={resetCareer}>Reset Career</button></div><div className="panel-body action-row"><strong className="phase-pill">{gameState.currentPhase}</strong><span>Season {gameState.season}, Week {gameState.week}, {gameState.currentMonth}.</span>{!gameState.currentPhase.startsWith('event_active') && <button onClick={advanceToNextEvent}>Advance Week / Continue to Next Event</button>}{gameState.currentPhase === 'event_ready' && <button onClick={() => { enterEvent(); navigate('/event-hub'); }}>Enter Event / Sim Background</button>}{gameState.currentPhase.startsWith('event_active') && <button onClick={() => navigate('/event-hub')}>Open Event Hub</button>}</div></div>
+      <div className="panel cockpit-panel"><div className="panel-header"><h2>Career Control</h2><button className="ghost-button" onClick={resetCareer}>Reset Career</button></div><div className="panel-body action-row"><strong className="phase-pill">{gameState.currentPhase}</strong><span>{myTeam?.shortName || 'No team'} — {gameState.currentDateLabel}. Next action: {gameState.currentPhase === 'event_ready' ? 'Enter Event' : 'Advance to Event Start'}.</span>{!gameState.currentPhase.startsWith('event_active') && gameState.currentPhase !== 'event_ready' && <button onClick={advanceToNextEvent}>Advance to Next Event</button>}{gameState.currentPhase === 'event_ready' && <button onClick={() => { enterEvent(); navigate('/event-hub'); }}>Enter Event / Sim Event in Background</button>}{gameState.currentPhase.startsWith('event_active') && <button onClick={() => navigate('/event-hub')}>Open Event Hub</button>}</div></div>
 
       <div className="grid-2">
         {myTeam && (
@@ -130,7 +131,7 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
               <th>Event</th>
               <th>Type</th>
               <th>Tier</th>
-              <th>Month</th>
+              <th>Dates</th>
               <th className="text-center">Teams</th>
               <th className="text-right">Prize Pool</th>
             </tr>
@@ -141,7 +142,7 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
                 <td><Link to={`/tournaments/${e.eventId}`}>{e.name}</Link></td>
                 <td style={{ color: 'var(--text-secondary)' }}>{e.eventType}</td>
                 <td><span className={tierBadgeClass(e.tier)}>{e.tier}</span></td>
-                <td>{e.month}</td>
+                <td>{formatDate(e.startDate)} – {formatDate(e.endDate)}</td>
                 <td className="text-center">{e.teams}</td>
                 <td className="text-right">{formatMoney(e.prizePool)}</td>
               </tr>

@@ -105,3 +105,35 @@ export function generateEventSummary(tournament, userTeamId) {
   const biggestUpset = allMatches.filter((m) => m.upset).sort((a,b) => Math.abs((b.teamA.ranking||0)-(b.teamB.ranking||0))-Math.abs((a.teamA.ranking||0)-(a.teamB.ranking||0)))[0] || null;
   return { eventId:tournament.event.eventId, eventName:tournament.event.name, champion:tournament.champion, runnerUp:tournament.playoffs?.runnerUp, semiFinalists:tournament.playoffs?.rounds?.[1]?.matches.flatMap((m)=>[m.teamA,m.teamB]).filter(Boolean) || [], userRecord:userResults.reduce((r,m)=>({ wins:r.wins + (m.winner.teamId===userTeamId?1:0), losses:r.losses + (m.winner.teamId!==userTeamId?1:0)}), {wins:0,losses:0}), userResults, biggestUpset, mvp:allMatches[0]?.topPerformer || null, prizeMoneyEarned:tournament.champion?.teamId===userTeamId ? Math.round((tournament.event.prizePool||0)*0.4) : 0, reputationChange:tournament.champion?.teamId===userTeamId ? 5 : 0, rankingMovement:'placeholder' };
 }
+
+export function buildEventStats(tournament) {
+  const matches = [
+    ...(tournament?.swiss?.rounds || []).flatMap((round) => round.matches || []),
+    ...(tournament?.playoffs?.rounds || []).flatMap((round) => (round.matches || []).map((m) => m.result).filter(Boolean)),
+  ];
+  const playerStats = new Map();
+  const teamStats = new Map();
+  matches.forEach((match) => {
+    const winnerTeamId = match.winner?.teamId;
+    [match.teamA, match.teamB].forEach((team) => {
+      if (!team) return;
+      const row = teamStats.get(team.teamId) || { team, wins: 0, losses: 0, mapsWon: 0, mapsLost: 0 };
+      if (winnerTeamId === team.teamId) row.wins += 1; else row.losses += 1;
+      row.mapsWon += team.teamId === match.teamA.teamId ? match.mapsWonA : match.mapsWonB;
+      row.mapsLost += team.teamId === match.teamA.teamId ? match.mapsWonB : match.mapsWonA;
+      teamStats.set(team.teamId, row);
+    });
+    (match.maps || []).forEach((map) => [...(map.teamAStats || []), ...(map.teamBStats || [])].forEach((stat) => {
+      const row = playerStats.get(stat.playerId) || { playerId: stat.playerId, gamertag: stat.gamertag, teamId: stat.teamId, mapsPlayed: 0, kills: 0, deaths: 0, assists: 0, ratingSum: 0, adrSum: 0, clutches: 0, openingKills: 0 };
+      row.mapsPlayed += 1; row.kills += stat.kills || 0; row.deaths += stat.deaths || 0; row.assists += stat.assists || 0; row.ratingSum += stat.rating || 0; row.adrSum += stat.ADR || 0; row.clutches += stat.clutches || 0; row.openingKills += stat.openingKills || 0;
+      row.averageRating = Math.round((row.ratingSum / row.mapsPlayed) * 100) / 100;
+      row.ADR = Math.round(row.adrSum / row.mapsPlayed);
+      playerStats.set(stat.playerId, row);
+    }));
+  });
+  const players = [...playerStats.values()];
+  const byRating = [...players].sort((a,b)=>b.averageRating-a.averageRating || b.kills-a.kills);
+  const byKills = [...players].sort((a,b)=>b.kills-a.kills);
+  const byClutches = [...players].sort((a,b)=>b.clutches-a.clutches);
+  return { players, teams: [...teamStats.values()], highestRated: byRating[0], topFragger: byKills[0], mostClutches: byClutches[0] };
+}

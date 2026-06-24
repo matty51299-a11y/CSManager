@@ -33,7 +33,17 @@ export function summarizeMatch(match) {
   const roundsA = match.maps.reduce((sum, map) => sum + map.scoreA, 0);
   const roundsB = match.maps.reduce((sum, map) => sum + map.scoreB, 0);
   const allStats = match.maps.flatMap((map) => [...map.teamAStats, ...map.teamBStats]);
-  const topPerformer = allStats.sort((a, b) => b.rating - a.rating || b.kills - a.kills)[0];
+  const totals = new Map();
+  allStats.forEach((stat) => {
+    const current = totals.get(stat.playerId) || { ...stat, totalKills: 0, totalDeaths: 0, totalAssists: 0, totalOpeningKills: 0, totalClutches: 0, ratingSum: 0, mapsPlayed: 0 };
+    current.totalKills += stat.kills; current.totalDeaths += stat.deaths; current.totalAssists += stat.assists || 0; current.totalOpeningKills += stat.openingKills || 0; current.totalClutches += stat.clutches || 0; current.ratingSum += stat.rating || 0; current.mapsPlayed += 1;
+    current.averageRating = Math.round((current.ratingSum / current.mapsPlayed) * 100) / 100;
+    current.rating = current.averageRating;
+    current.kills = current.totalKills;
+    totals.set(stat.playerId, current);
+  });
+  const seriesPlayerTotals = [...totals.values()].sort((a,b)=>b.averageRating-a.averageRating || b.totalKills-a.totalKills);
+  const topPerformer = seriesPlayerTotals[0];
   const loser = match.winner.teamId === match.teamA.teamId ? match.teamB : match.teamA;
   const rankingGap = Number(match.winner.ranking || 999) - Number(loser.ranking || 999);
   return {
@@ -43,6 +53,8 @@ export function summarizeMatch(match) {
     roundsA,
     roundsB,
     topPerformer,
+    seriesPlayerTotals,
+    summaryText: `${match.winner.shortName || match.winner.name} defeated ${(match.winner.teamId === match.teamA.teamId ? match.teamB : match.teamA).shortName || (match.winner.teamId === match.teamA.teamId ? match.teamB : match.teamA).name} ${mapsWonA}-${mapsWonB} behind ${topPerformer?.gamertag || 'a star performance'}.`,
     loser,
     upset: rankingGap >= 10,
   };

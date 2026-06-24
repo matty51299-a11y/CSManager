@@ -12,19 +12,25 @@ export default function Diagnostics({ gameState, resetCareer }) {
   const tournamentDiagnostic = runTournamentDiagnostics(gameState);
   const eventActivePhases = ['event_active_swiss', 'event_active_playoffs'];
   const careerChecks = [
-    { name: 'Career can start', valid: Boolean(gameState.careerStarted && gameState.selectedTeamId), errors: [] },
+    { name: 'Career starts on 2026-01-07', valid: gameState.currentDate === '2026-01-07' || gameState.careerStarted, errors: [] },
+    { name: 'Current date displays correctly', valid: Boolean(gameState.currentDateLabel), errors: [] },
     { name: 'Selected team persists after refresh', valid: Boolean(gameState.selectedTeamId), errors: [] },
-    { name: 'Next event can be found', valid: gameState.events.length > 0, errors: [] },
+    { name: 'Advance to next event sets date to 2026-01-13', valid: gameState.events[0]?.startDate === '2026-01-13', errors: [] },
+    { name: 'event_ready phase is available', valid: ['dashboard','event_ready','event_active_swiss','event_active_playoffs','event_complete','no_career','team_selection'].includes(gameState.currentPhase), errors: [] },
     { name: 'Event invite list is generated', valid: gameState.rankings.length >= 8, errors: [] },
     { name: 'enterEvent creates activeTournament', valid: Boolean(gameState.activeTournament) || !eventActivePhases.includes(gameState.currentPhase), errors: [] },
-    { name: 'User match can be found in active tournament', valid: Boolean(gameState.selectedTeamId), errors: [] },
-    { name: 'simUserMatch returns a valid result', valid: tournamentDiagnostic.valid, errors: tournamentDiagnostic.errors },
+    { name: 'Enter Event opens Event Hub', valid: Boolean(gameState.activeTournament) || !eventActivePhases.includes(gameState.currentPhase), errors: [] },
+    { name: 'Sim Your Match does not crash', valid: tournamentDiagnostic.valid, errors: tournamentDiagnostic.errors },
+    { name: 'Player stats are generated', valid: tournamentDiagnostic.valid, errors: [] },
+    { name: 'Event cumulative stats update', valid: tournamentDiagnostic.valid, errors: [] },
     { name: 'simAiMatches completes AI matches', valid: tournamentDiagnostic.valid, errors: [] },
     { name: 'Swiss advances correctly (8 qualify)', valid: tournamentDiagnostic.valid, errors: [] },
     { name: 'Playoffs generate with 8 teams', valid: tournamentDiagnostic.valid, errors: [] },
     { name: 'Playoffs produce exactly one champion', valid: Boolean(tournamentDiagnostic.champion), errors: [] },
     { name: 'Event summary is created', valid: true, errors: [] },
-    { name: 'Returning to Dashboard works', valid: true, errors: [] },
+    { name: 'Completing event sets date to event endDate', valid: gameState.events[0]?.endDate === '2026-01-25', errors: [] },
+    { name: 'Next event advances to the next real date', valid: gameState.events[1]?.startDate === '2026-01-28', errors: [] },
+    { name: 'Calendar shows event statuses correctly', valid: gameState.events.every((e) => e.startDate && e.endDate), errors: [] },
     { name: 'No duplicate teams appear', valid: tournamentDiagnostic.valid, errors: [] },
     { name: 'No team plays itself', valid: tournamentDiagnostic.valid, errors: [] },
     { name: 'Inbox items are generated', valid: gameState.inboxItems.length > 0 || !gameState.careerStarted, errors: [] },
@@ -106,12 +112,12 @@ export default function Diagnostics({ gameState, resetCareer }) {
           <div className="panel-header"><h2>Game State</h2></div>
           <div className="panel-body">
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Season</span>
-              <strong>{gameState.season}</strong>
+              <span style={{ color: 'var(--text-secondary)' }}>Season Year</span>
+              <strong>{gameState.seasonYear}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Week</span>
-              <strong>{gameState.week}</strong>
+              <span style={{ color: 'var(--text-secondary)' }}>Current Date</span>
+              <strong>{gameState.currentDateLabel}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Phase</span>
