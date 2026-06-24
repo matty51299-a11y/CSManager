@@ -26,12 +26,9 @@ function EventHubRoute({ gameState, actions }) {
     <EventHub
       gameState={gameState}
       simUserMatch={actions.simUserMatch}
-      simOtherMatch={actions.simOtherMatch}
-      simAiMatches={actions.simAiMatches}
-      advanceSwissRound={actions.advanceSwissRound}
-      generatePlayoffs={actions.generatePlayoffs}
-      simPlayoffRound={actions.simPlayoffRound}
-      completeEvent={actions.completeEvent}
+      simOtherMatches={actions.simOtherMatches}
+      advanceEventStage={actions.advanceEventStage}
+      finishEvent={actions.finishEvent}
       returnToDashboard={goToDashboard}
     />
   );

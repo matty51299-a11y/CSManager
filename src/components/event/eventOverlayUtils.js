@@ -1,35 +1,24 @@
-import { getNextSwissPairings } from '../../utils/swissEngine';
-import { sortStandings } from '../../utils/tournamentStandings';
 import { ACTIVE_MAP_POOL, calculateTeamStrength } from '../../utils/teamStrength';
+import { getLiveModel } from '../../utils/liveEventController';
 
+// The overlay model now comes from the format-agnostic live event controller,
+// so single-elimination, groups, Swiss and Major events all render from one
+// uniform shape instead of a Swiss-only model.
 export function getOverlayModel(tournament, gameState) {
-  const userTeamId = gameState.selectedTeamId;
-  const userTeam = gameState.teams.find((team) => team.teamId === userTeamId);
-  const activeRound = tournament.swiss?.rounds.find((round) => !round.complete);
-  const completedKeys = new Set((activeRound?.matches || []).map((m) => [m.teamA.teamId, m.teamB.teamId].sort().join('-')));
-  const basePairings = activeRound?.pendingPairings || (!tournament.swiss?.complete ? getNextSwissPairings(tournament.swiss) : []);
-  const pairings = basePairings.filter(([a, b]) => a && b && !completedKeys.has([a.teamId, b.teamId].sort().join('-')));
-  const userStanding = tournament.swiss?.standings.find((standing) => standing.teamId === userTeamId);
-  const pendingUser = pairings.find(([a, b]) => [a.teamId, b.teamId].includes(userTeamId));
-  const nextOpponent = pendingUser ? (pendingUser[0].teamId === userTeamId ? pendingUser[1].team : pendingUser[0].team) : null;
-  const playoffPendingUser = tournament.playoffs?.rounds.flatMap((round, roundIndex) => round.matches.map((match, matchIndex) => ({ ...match, roundName: round.name, roundIndex, matchIndex }))).find((match) => !match.result && [match.teamA?.teamId, match.teamB?.teamId].includes(userTeamId));
-  const allMatches = [
-    ...(tournament.swiss?.rounds || []).flatMap((round) => round.matches || []),
-    ...(tournament.playoffs?.rounds || []).flatMap((round) => round.matches.map((match) => match.result).filter(Boolean)),
-  ];
-  const latestUserMatch = [...allMatches].reverse().find((match) => [match.teamA.teamId, match.teamB.teamId].includes(userTeamId));
-  const status = tournament.champion ? 'Finished' : tournament.playoffs ? (userStanding?.status === 'qualified' ? 'Alive' : 'Eliminated') : userStanding?.status === 'eliminated' ? 'Eliminated' : userStanding?.status === 'qualified' ? 'Qualified' : 'Alive';
-  const playoffOpponent = playoffPendingUser ? (playoffPendingUser.teamA?.teamId === userTeamId ? playoffPendingUser.teamB : playoffPendingUser.teamA) : null;
-  return { userTeamId, userTeam, activeRound, pairings, pendingUser, playoffPendingUser, nextOpponent: nextOpponent || playoffOpponent, userStanding, allMatches, latestUserMatch, status, standings: sortStandings(tournament.swiss?.standings || []) };
+  return getLiveModel(tournament, gameState);
 }
 
+// Seed of a team in the live field (1-based), falling back to its ranking.
 export function teamSeed(team, tournament) {
-  return tournament.teams.findIndex((entry) => entry.teamId === team?.teamId) + 1 || Number(team?.ranking || 99);
+  if (!team) return 99;
+  const idx = (tournament?.teams || []).findIndex((entry) => entry.teamId === team.teamId);
+  return idx >= 0 ? idx + 1 : Number(team.ranking || 99);
 }
 
 export function bestFinish(tournament, status) {
   if (tournament.champion) return tournament.champion.shortName ? `${tournament.champion.shortName} champion` : 'Event complete';
   if (status === 'Eliminated') return 'Placement locked';
+  if (status === 'Waiting') return 'Awaiting entry';
   return 'Champion possible';
 }
 

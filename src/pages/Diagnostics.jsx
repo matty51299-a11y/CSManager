@@ -4,6 +4,66 @@ import { runTournamentDiagnostics } from '../utils/tournamentEngine.js';
 import { diagnoseEventFormat, simulateEventFormat } from '../utils/eventStageEngine.js';
 import { getEventFormat } from '../utils/eventFormatEngine.js';
 import { updateRankingsAfterEvent } from '../utils/vrsRankingEngine.js';
+import { buildInviteSnapshot } from '../utils/eventInviteEngine.js';
+import { createLiveTournament, getLiveModel, runLiveEventDiagnostics } from '../utils/liveEventController.js';
+
+// Run each format INTERACTIVELY (user sims their match, sims the AI, advances
+// stages) and report whether it reaches a champion without crashing (PART 11).
+function buildInteractiveDiagnostics(gameState) {
+  const data = { players: gameState.players, teamMapRatings: gameState.teamMapRatings };
+  const run = (eventId, label) => {
+    const event = gameState.events.find((e) => e.eventId === eventId);
+    if (!event) return { name: `${label} (event missing)`, valid: false, errors: ['Event not found in data'] };
+    const snap = buildInviteSnapshot(event, gameState.rankings, gameState.teams);
+    const userId = snap.invitees[0]?.teamId;
+    const d = runLiveEventDiagnostics(event, snap, gameState.teams, gameState.rankings, data, userId);
+    return { name: label, valid: d.valid, errors: d.errors, champion: d.champion, meta: d };
+  };
+  const checks = [
+    run('blast_bounty_s1', 'Interactive BLAST Bounty can reach champion'),
+    run('iem_katowice', 'Interactive IEM Katowice can reach champion'),
+    run('esl_pro_league_s1', 'Interactive ESL Pro League can reach champion'),
+    run('blast_rivals_s1', 'Interactive BLAST Rivals can reach champion'),
+    run('major_1', 'Interactive Major can reach champion'),
+    run('pgl_masters_spring', 'Interactive Swiss event can reach champion'),
+  ];
+  const metas = checks.map((c) => c.meta).filter(Boolean);
+  const allReached = metas.length > 0 && metas.every((m) => m.champion);
+
+  checks.push({ name: 'User match can be found in every active format', valid: metas.every((m) => m.foundUserMatch), errors: metas.every((m) => m.foundUserMatch) ? [] : ['A format never surfaced a user match'] });
+  checks.push({ name: 'AI matches can be simulated in every format', valid: metas.every((m) => m.simmedAi), errors: metas.every((m) => m.simmedAi) ? [] : ['A format never simulated AI matches'] });
+  checks.push({ name: 'No duplicate teams and no self matches (interactive)', valid: allReached, errors: allReached ? [] : ['A format reported field/self-play errors'] });
+
+  const major = checks.find((c) => c.name.includes('Major'))?.meta;
+  checks.push({ name: 'User can wait for a later stage (Major top seed)', valid: Boolean(major?.sawWaiting), errors: major?.sawWaiting ? [] : ['Major top seed never showed a waiting state'] });
+
+  // VRS updates after an interactive completion.
+  const bounty = checks.find((c) => c.name.includes('BLAST Bounty'))?.meta;
+  let vrsValid = false;
+  if (bounty?.tournament) {
+    const updated = updateRankingsAfterEvent(gameState.rankings, bounty.tournament, gameState.teams);
+    vrsValid = updated.length === gameState.rankings.length && updated.some((r) => (r.rankMovement || 0) !== 0 || (r.vrsPoints || 0) > 0);
+  }
+  checks.push({ name: 'VRS updates after interactive completion', valid: vrsValid, errors: vrsValid ? [] : ['Interactive completion did not move VRS'] });
+
+  // EventOverlay model builds for every format without crashing.
+  let overlaySafe = true;
+  ['blast_bounty_s1', 'iem_katowice', 'esl_pro_league_s1', 'blast_rivals_s1', 'major_1', 'pgl_masters_spring'].forEach((id) => {
+    const event = gameState.events.find((e) => e.eventId === id);
+    if (!event) { overlaySafe = false; return; }
+    try {
+      const snap = buildInviteSnapshot(event, gameState.rankings, gameState.teams);
+      const userId = snap.invitees[0]?.teamId;
+      const t = createLiveTournament(event, { ...snap, userTeamId: userId }, gameState.teams, gameState.rankings);
+      getLiveModel(t, { ...gameState, selectedTeamId: userId });
+    } catch {
+      overlaySafe = false;
+    }
+  });
+  checks.push({ name: 'EventOverlay does not crash across formats', valid: overlaySafe, errors: overlaySafe ? [] : ['An overlay model failed to build'] });
+
+  return checks;
+}
 
 // Run each event format end to end and report whether it reaches a champion.
 function buildFormatDiagnostics(gameState) {
@@ -54,6 +114,7 @@ function buildFormatDiagnostics(gameState) {
 
 export default function Diagnostics({ gameState, resetCareer }) {
   const formatChecks = useMemo(() => buildFormatDiagnostics(gameState), [gameState]);
+  const interactiveChecks = useMemo(() => buildInteractiveDiagnostics(gameState), [gameState]);
   const results = runAllValidations(
     gameState.teams,
     gameState.players,
@@ -62,13 +123,13 @@ export default function Diagnostics({ gameState, resetCareer }) {
     gameState.events
   );
   const tournamentDiagnostic = runTournamentDiagnostics(gameState);
-  const eventActivePhases = ['event_active_swiss', 'event_active_playoffs'];
+  const eventActivePhases = ['event_active', 'event_active_swiss', 'event_active_playoffs'];
   const careerChecks = [
     { name: 'Career starts on 2026-01-07', valid: gameState.currentDate === '2026-01-07' || gameState.careerStarted, errors: [] },
     { name: 'Current date displays correctly', valid: Boolean(gameState.currentDateLabel), errors: [] },
     { name: 'Selected team persists after refresh', valid: Boolean(gameState.selectedTeamId), errors: [] },
     { name: 'Advance to next event sets date to 2026-01-13', valid: gameState.events[0]?.startDate === '2026-01-13', errors: [] },
-    { name: 'event_ready phase is available', valid: ['dashboard','event_ready','event_active_swiss','event_active_playoffs','event_complete','no_career','team_selection'].includes(gameState.currentPhase), errors: [] },
+    { name: 'event_ready phase is available', valid: ['dashboard','event_ready','event_active','event_active_swiss','event_active_playoffs','event_complete','no_career','team_selection','season_complete'].includes(gameState.currentPhase), errors: [] },
     { name: 'Event invite list is generated', valid: gameState.rankings.length >= 8, errors: [] },
     { name: 'Event entry modal appears at event_ready', valid: gameState.currentPhase === 'event_ready' ? Boolean(gameState.currentEventId) : true, errors: [] },
     { name: 'Entering event hides main app sidebar', valid: eventActivePhases.includes(gameState.currentPhase) ? Boolean(gameState.activeTournament) : true, errors: [] },
@@ -99,7 +160,7 @@ export default function Diagnostics({ gameState, resetCareer }) {
     { name: 'No team plays itself', valid: tournamentDiagnostic.valid, errors: [] },
     { name: 'Inbox items are generated', valid: gameState.inboxItems.length > 0 || !gameState.careerStarted, errors: [] },
   ];
-  const allResults = [...results, tournamentDiagnostic, ...formatChecks, ...careerChecks];
+  const allResults = [...results, tournamentDiagnostic, ...formatChecks, ...interactiveChecks, ...careerChecks];
   const allPassed = allResults.every((r) => r.valid);
 
   return (

@@ -786,3 +786,164 @@ play differently instead of all feeling like the same Swiss tournament.
 Make the interactive (user-invited) event play its real format end-to-end
 (true single-elimination, groups and multi-stage Major flows in the overlay)
 instead of the simplified 16-team Swiss hub, reusing the new stage engine.
+
+### Task 14 — Interactive Live Events Use the Real Format Engine (Complete)
+
+The interactive (user-invited) event path now plays the selected event's REAL
+format end to end. The old universal "every event becomes a 16-team Swiss to
+playoffs hub" fallback has been removed. The player no longer plays every event
+through the same Swiss hub.
+
+#### Old universal Swiss fallback removed
+- `enterEvent()` in `src/state/GameStateContext.jsx` no longer builds a 16-team
+  Swiss tournament via `createTournament()` for invited events. It now calls
+  `createLiveTournament(event, snapshot, teams, rankings)` which reads the
+  event's `formatType` and initialises the correct first stage.
+- The interactive career phase is now a single `event_active` phase (the old
+  `event_active_swiss` / `event_active_playoffs` split is gone). `startsWith
+  ('event_active')` checks still work for full-screen event mode.
+- The overlay no longer reads `tournament.swiss` / `tournament.playoffs`. The
+  whole overlay renders from one format-agnostic model.
+
+#### Live event controller added
+- `src/utils/liveEventController.js` is a clean, component-free controller that
+  progresses ANY format step by step. It exposes:
+  `createLiveTournament`, `getCurrentUserMatch`, `simulateUserMatch`,
+  `simulateOtherMatches`, `canAdvanceStage`, `advanceStage`, `isEventComplete`,
+  `completeLiveEvent`, plus `getLiveModel` (the overlay model),
+  `buildLiveSummary`, `buildNewsForMatches` and `runLiveEventDiagnostics`.
+- A live tournament is a list of progressive `phases` (each a `bracket` round,
+  a `swiss` stage or a `groups` stage) with a `currentPhaseIndex`, a flat
+  `allMatches` list, an `eliminatedOrder`, `champion`/`runnerUp`/`placements`
+  and the visible `trackerSteps`. Phases are built lazily as the user advances.
+- React only touches the controller through GameStateContext actions; no event
+  logic lives inside components.
+
+#### GameStateContext actions updated (format-agnostic)
+- `enterEvent()` builds the correct live format (or background-sims break/not
+  invited events as before).
+- `simUserMatch()` sims only the user's current match in whatever format.
+- `simOtherMatches()` sims the AI matches for the current step.
+- `advanceEventStage()` advances to the next stage/round when all matches done.
+- `finishEvent()` / `completeCurrentEvent()` finalise placements, apply VRS,
+  build the summary, set the date to the event `endDate` and return cleanly.
+- Old action names (`simAiMatches`, `advanceSwissRound`, `generatePlayoffs`,
+  `simPlayoffRound`, `simOtherMatch`, `completeEvent`) remain as thin aliases so
+  nothing breaks, but they all route through the new format-agnostic actions.
+
+#### How each live format now works interactively
+- **bounty32_single_elim (BLAST Bounty)** — true 32-team single elimination:
+  Round of 32 → Round of 16 → Quarter-finals → Semi-finals → Final → Champion.
+  If the user loses they are marked eliminated but the rest of the bracket can
+  still be simmed. Beating a higher-ranked team posts a "bounty claimed" news.
+- **swiss16_playoffs8 (PGL/StarSeries/EWC)** — Swiss until 8 qualify, then a
+  top-8 bracket, reusing the existing Swiss engine inside a swiss phase.
+- **rivals8_groups_playoffs (BLAST Rivals)** — 2 groups of 4 round robin, top 2
+  each advance, then Semi-finals → Final → Champion.
+- **epl32_groups_playoffs (ESL Pro League)** — 8 groups of 4, top 2 advance to a
+  16-team playoff (Round of 16 → QF → SF → Final → Champion).
+- **iem24_playin_groups_playoffs (IEM Katowice)** — top 8 seeds start in the
+  Main Stage; seeds 9-24 play a Play-In that produces 8 winners; the 16-team
+  Main Stage Swiss sends 8 to the playoffs. Top-8 users skip the Play-In and
+  wait for the Main Stage; users seeded 9-24 play the Play-In.
+- **major32_three_stage_playoffs (Major)** — Stage 1 (lower 16 Swiss → 8),
+  Stage 2 (+8 mid seeds → 8), Stage 3 (+top 8 seeds → 8), then a top-8 playoff
+  with a Bo5 grand final. A user seeded into a later stage gets a clear
+  "Awaiting Stage 2 / Stage 3" state while earlier stages are simulated.
+
+#### How the user path works per format
+- The model exposes `status` (Alive / Qualified / Eliminated / Waiting /
+  Champion), the user's next match, record, next opponent and a format-aware
+  implication line ("3 wins qualifies", "Top 2 of the group qualify",
+  "Win reaches the next round / a loss eliminates", "Seeded into Stage 3").
+- `EventUserPath`, `EventSidebar` and `EventHeader` all read these so the user
+  path reads correctly for single elim, groups, Swiss and Major.
+
+#### EventOverlay adapts by format
+- Tabs come from the format: Overview + Bracket/Groups/Swiss/Stages + Results +
+  Stats + Placements. A non-Swiss event never shows a Swiss tab.
+- `StageTracker` now reflects real progress per format (BLAST Bounty: Round of
+  32 → … → Champion; IEM: Play-In → Main Stage → Playoffs → Champion; EPL:
+  Groups → Round of 16 → … → Champion; Major: Stage 1 → Stage 2 → Stage 3 →
+  Playoffs → Champion).
+- The Overview stays clean (left match rail, open centre canvas / user path,
+  right sidebar, next action). Full group tables / Swiss pools / bracket detail
+  live in their own tabs.
+- Stage views (`SingleElimBracketView`, `GroupStageView`, `MajorStageView`,
+  `SwissStageView`, `EventBracketView`, `EventSwissView`) were rewritten to read
+  the format-agnostic model instead of `tournament.swiss` / `tournament.playoffs`.
+
+#### VRS preserved
+- Event completion still calls `updateRankingsAfterEvent(rankings, tournament,
+  teams)`. The live tournament exposes a flat `allMatches` list plus `champion`
+  and `event`, which is exactly the shape the VRS engine already supports, so
+  dynamic VRS points, rank movement and form updates are unchanged. Background
+  (not invited / break) events still use the stage engine and update VRS too.
+
+#### Diagnostics updated
+- New interactive checks drive each format through the controller and confirm:
+  BLAST Bounty / IEM / EPL / BLAST Rivals / Major / Swiss can reach a champion
+  interactively; the user match can be found in every active format; AI matches
+  can be simulated in every format; no duplicate teams and no self matches; the
+  user can wait for a later stage (Major top seed); VRS updates after an
+  interactive completion; and `getLiveModel` builds for every format without
+  crashing.
+
+#### Files Created
+- src/utils/liveEventController.js
+
+#### Files Modified
+- src/state/GameStateContext.jsx (interactive path now builds real live formats)
+- src/utils/tournamentEngine.js (buildEventStats reads flat allMatches)
+- src/components/event/eventOverlayUtils.js (model delegates to controller)
+- src/pages/EventOverlay.jsx (guard on phases; new action wiring)
+- src/App.jsx (EventHubRoute passes the new action names)
+- src/components/event/EventHeader.jsx (single model-driven primary action)
+- src/components/event/EventTabs.jsx (unchanged API, format-driven tabs)
+- src/components/event/EventMatchRail.jsx (model pending/recent matches)
+- src/components/event/EventMainPanel.jsx (passes actions to stage views)
+- src/components/event/EventCanvas.jsx (format-aware Overview canvas)
+- src/components/event/EventUserPath.jsx (format-aware user path)
+- src/components/event/EventSidebar.jsx (model-driven)
+- src/components/event/EventBracketView.jsx (renders model.bracketRounds)
+- src/components/event/SingleElimBracketView.jsx
+- src/components/event/GroupStageView.jsx
+- src/components/event/MajorStageView.jsx
+- src/components/event/SwissStageView.jsx
+- src/components/event/EventSwissView.jsx (model.swissStandings)
+- src/components/event/StageTracker.jsx (model trackerSteps / activeTrackerIndex)
+- src/pages/Diagnostics.jsx (interactive format diagnostics)
+- progress.md
+
+#### Manual / Headless Test Results
+- `npm run build` passes (only the existing large-chunk advisory).
+- `npm run lint` passes (only the one pre-existing fallback-spread warning in
+  GameStateContext).
+- `npm run dev` serves the app with HTTP 200.
+- A headless Node harness drove every format interactively (sim user match, sim
+  AI, advance stage) over the real generated database and confirmed each reaches
+  a champion with no self-play / duplicate teams:
+  - BLAST Bounty: 31 matches, Round of 32 → Champion, user eliminated mid-bracket
+    still completes; bounty news fires.
+  - IEM Katowice: top seed waits through Play-In then plays Main Stage; a seed-17
+    user plays the Play-In and is eliminated; champion produced.
+  - ESL Pro League: 8 groups → top-2 → 16-team bracket → champion.
+  - BLAST Rivals: 2 groups of 4 → SF → Final → champion.
+  - Major: Stage 1/2/3 Swiss → top-8 playoff (Bo5 final) → champion; a top-8 user
+    shows "Awaiting Stage 3"; a seed-21 user plays from Stage 1.
+  - PGL Masters: Swiss → top-8 playoff → champion.
+  - VRS rank/points moved after each interactive completion.
+
+#### Known Limitations
+- Event formats are still simplified approximations, not exact real-world
+  replicas.
+- Exact real-world seeding (cross-bracket placement, Buchholz, regional slots)
+  is still simplified; playoff rounds after the first pair winners sequentially.
+- Major/IEM later stages reuse the simplified 16-team Swiss helper.
+- No transfers yet. No contracts yet. No morale yet. No scouting yet.
+- Dynamic VRS is still an approximation, not the exact Valve formula.
+
+#### Next Recommended Task
+Add proper bracket seeding and Buchholz-style Swiss tiebreakers to the live
+controller, and persist per-player event stats into long-term career histories,
+without adding transfers, contracts, morale or scouting yet.
