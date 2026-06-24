@@ -11,6 +11,7 @@ export function getOverlayModel(tournament, gameState) {
   const pairings = basePairings.filter(([a, b]) => a && b && !completedKeys.has([a.teamId, b.teamId].sort().join('-')));
   const userStanding = tournament.swiss?.standings.find((standing) => standing.teamId === userTeamId);
   const pendingUser = pairings.find(([a, b]) => [a.teamId, b.teamId].includes(userTeamId));
+  const nextOpponent = pendingUser ? (pendingUser[0].teamId === userTeamId ? pendingUser[1].team : pendingUser[0].team) : null;
   const playoffPendingUser = tournament.playoffs?.rounds.flatMap((round, roundIndex) => round.matches.map((match, matchIndex) => ({ ...match, roundName: round.name, roundIndex, matchIndex }))).find((match) => !match.result && [match.teamA?.teamId, match.teamB?.teamId].includes(userTeamId));
   const allMatches = [
     ...(tournament.swiss?.rounds || []).flatMap((round) => round.matches || []),
@@ -18,7 +19,8 @@ export function getOverlayModel(tournament, gameState) {
   ];
   const latestUserMatch = [...allMatches].reverse().find((match) => [match.teamA.teamId, match.teamB.teamId].includes(userTeamId));
   const status = tournament.champion ? 'Finished' : tournament.playoffs ? (userStanding?.status === 'qualified' ? 'Alive' : 'Eliminated') : userStanding?.status === 'eliminated' ? 'Eliminated' : userStanding?.status === 'qualified' ? 'Qualified' : 'Alive';
-  return { userTeamId, userTeam, activeRound, pairings, pendingUser, playoffPendingUser, userStanding, allMatches, latestUserMatch, status, standings: sortStandings(tournament.swiss?.standings || []) };
+  const playoffOpponent = playoffPendingUser ? (playoffPendingUser.teamA?.teamId === userTeamId ? playoffPendingUser.teamB : playoffPendingUser.teamA) : null;
+  return { userTeamId, userTeam, activeRound, pairings, pendingUser, playoffPendingUser, nextOpponent: nextOpponent || playoffOpponent, userStanding, allMatches, latestUserMatch, status, standings: sortStandings(tournament.swiss?.standings || []) };
 }
 
 export function teamSeed(team, tournament) {
