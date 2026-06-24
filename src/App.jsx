@@ -11,6 +11,7 @@ import Calendar from './pages/Calendar';
 import TournamentDetail from './pages/TournamentDetail';
 import Roster from './pages/Roster';
 import Diagnostics from './pages/Diagnostics';
+import MatchCentre from './pages/MatchCentre';
 import initialGameState from './data/gameState';
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
             <Route path="/calendar" element={<Calendar gameState={gameState} />} />
             <Route path="/tournaments/:tournamentId" element={<TournamentDetail gameState={gameState} />} />
             <Route path="/roster" element={<Roster gameState={gameState} />} />
+            <Route path="/match-centre" element={<MatchCentre gameState={gameState} />} />
             <Route path="/diagnostics" element={<Diagnostics gameState={gameState} />} />
           </Routes>
         </main>

@@ -29,6 +29,37 @@ Any coding agent must read this file before making changes.
 - Sidebar navigation with season/week display
 - react-router-dom for routing
 
+
+### Task 3 — Simple Match Simulation and Match Centre (Complete)
+
+- Added standalone match simulation utilities outside React components.
+- Match engine supports Bo1, Bo3 and Bo5 series.
+- Added active map pool aware veto/pick logic for Ancient, Anubis, Dust II, Inferno, Mirage, Nuke and Overpass.
+- Added team strength calculation using average overall, role balance, selected map rating, IGL/calling, AWPer, entry, clutch, consistency and reputation pressure.
+- Added compact Counter-Strike-style score generation with rare overtime scorelines.
+- Added per-map estimated player stats and top performer summaries: top fragger, highest rated player, clutch player and underperformer.
+- Added Match Centre page where the user can select any two database teams, choose Bo1/Bo3/Bo5 and view vetoes, scores, winner, performers and strength breakdowns.
+- Added Match Centre to sidebar navigation.
+- Match simulation has fallbacks for missing map ratings and unusual/missing roles so it returns diagnostics instead of crashing.
+
+#### Files Created
+- src/utils/teamStrength.js
+- src/utils/mapVetoEngine.js
+- src/utils/matchEngine.js
+- src/pages/MatchCentre.jsx
+
+#### Files Modified
+- src/App.jsx
+- src/components/Sidebar.jsx
+- src/index.css
+- progress.md
+
+#### Known Limitations
+- Match results are single-click deterministic estimates for now, not persistent fixtures.
+- Player map stats are generated estimates and are not saved to player history.
+- Veto logic is intentionally simple and does not yet model team tendencies beyond map ratings.
+- No tournament automation, morale, transfers or ranking impact has been added.
+
 ### Task 2 — Spreadsheet Import Pipeline (Complete)
 
 - Created import script: scripts/importCsDatabase.mjs
@@ -97,14 +128,13 @@ Nothing.
 
 ## Planned Next
 
-1. Simple match simulation (CS round-based, BO1/BO3)
-2. Tournament bracket/group stage formats
-3. VRS-style ranking calculation
-4. Transfers and free agency
-5. Contract management
-6. Advance week / season progression
-7. Search/filter on Teams and Players pages
-8. Delete orphaned old data files (src/data/teams.js, players.js, maps.js, tournaments.js)
+1. Add tournament bracket/group stage formats powered by the match engine
+2. Add VRS-style ranking calculation after simulated matches
+3. Transfers and free agency
+4. Contract management
+5. Advance week / season progression
+6. Search/filter on Teams and Players pages
+7. Delete orphaned old data files (src/data/teams.js, players.js, maps.js, tournaments.js)
 
 ## Rules for Future Coding Tasks
 
