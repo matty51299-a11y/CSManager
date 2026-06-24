@@ -20,5 +20,20 @@ export function formatMoney(amount) {
 }
 
 export function tierBadgeClass(tier) {
-  return `badge badge-${tier.toLowerCase()}`;
+  const t = (tier || 'c').toLowerCase().replace('+', 'plus');
+  return `badge badge-${t}`;
+}
+
+export function getTeamMapRatings(teamId, teamMapRatings) {
+  return teamMapRatings.find((r) => r.teamId === teamId) || null;
+}
+
+const MONTH_ORDER = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
+export function monthIndex(month) {
+  const idx = MONTH_ORDER.indexOf(month);
+  return idx >= 0 ? idx : 99;
 }

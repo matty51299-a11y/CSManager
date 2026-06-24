@@ -40,28 +40,35 @@ export function validatePlayersHaveValidTeamIds(teams, players) {
   return { valid: errors.length === 0, errors };
 }
 
-export function validateTeamMapRatingsExist(teams, maps) {
+export function validateTeamMapRatingsExist(teams, teamMapRatings) {
   const errors = [];
-  const mapIds = maps.map((m) => m.mapId);
+  const ratingTeamIds = new Set(teamMapRatings.map((r) => r.teamId));
   for (const team of teams) {
-    if (!team.mapRatings) {
-      errors.push(`${team.shortName} has no mapRatings`);
-      continue;
-    }
-    for (const mapId of mapIds) {
-      if (team.mapRatings[mapId] === undefined) {
-        errors.push(`${team.shortName} missing rating for map "${mapId}"`);
-      }
+    if (!ratingTeamIds.has(team.teamId)) {
+      errors.push(`${team.shortName} has no map ratings`);
     }
   }
   return { valid: errors.length === 0, errors };
 }
 
-export function runAllValidations(teams, players, maps) {
+export function validateEventsHaveValidFormats(events) {
+  const errors = [];
+  for (const e of events) {
+    if (!e.eventId) errors.push(`Event missing eventId: "${e.name}"`);
+    if (!e.name) errors.push(`Event ${e.eventId} missing name`);
+    if (!e.tier) errors.push(`Event "${e.name}" missing tier`);
+    if (!e.month) errors.push(`Event "${e.name}" missing month`);
+    if (!e.format) errors.push(`Event "${e.name}" missing format`);
+  }
+  return { valid: errors.length === 0, errors };
+}
+
+export function runAllValidations(teams, players, maps, teamMapRatings, events) {
   return [
     { name: 'Every team has 5 players', ...validateEveryTeamHasFivePlayers(teams, players) },
     { name: 'No duplicate active players', ...validateNoDuplicateActivePlayers(players) },
     { name: 'Players have valid team IDs', ...validatePlayersHaveValidTeamIds(teams, players) },
-    { name: 'Team map ratings exist', ...validateTeamMapRatingsExist(teams, maps) },
+    { name: 'Team map ratings exist', ...validateTeamMapRatingsExist(teams, teamMapRatings) },
+    { name: 'Events have valid formats', ...validateEventsHaveValidFormats(events) },
   ];
 }

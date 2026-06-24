@@ -1,0 +1,65 @@
+[
+  {
+    "mapId": "ancient",
+    "name": "Ancient",
+    "activeDuty": true,
+    "ctSided": 51,
+    "complexity": 85,
+    "awpImpact": 65,
+    "utilityImportance": 88
+  },
+  {
+    "mapId": "anubis",
+    "name": "Anubis",
+    "activeDuty": true,
+    "ctSided": 49,
+    "complexity": 78,
+    "awpImpact": 68,
+    "utilityImportance": 82
+  },
+  {
+    "mapId": "dust2",
+    "name": "Dust II",
+    "activeDuty": true,
+    "ctSided": 48,
+    "complexity": 58,
+    "awpImpact": 82,
+    "utilityImportance": 55
+  },
+  {
+    "mapId": "inferno",
+    "name": "Inferno",
+    "activeDuty": true,
+    "ctSided": 52,
+    "complexity": 80,
+    "awpImpact": 62,
+    "utilityImportance": 95
+  },
+  {
+    "mapId": "mirage",
+    "name": "Mirage",
+    "activeDuty": true,
+    "ctSided": 50,
+    "complexity": 62,
+    "awpImpact": 75,
+    "utilityImportance": 70
+  },
+  {
+    "mapId": "nuke",
+    "name": "Nuke",
+    "activeDuty": true,
+    "ctSided": 58,
+    "complexity": 90,
+    "awpImpact": 72,
+    "utilityImportance": 92
+  },
+  {
+    "mapId": "overpass",
+    "name": "Overpass",
+    "activeDuty": true,
+    "ctSided": 54,
+    "complexity": 83,
+    "awpImpact": 70,
+    "utilityImportance": 86
+  }
+]

@@ -1,14 +1,14 @@
 import { Link } from 'react-router-dom';
-import { tierBadgeClass, formatMoney } from '../utils/helpers';
+import { tierBadgeClass, formatMoney, monthIndex } from '../utils/helpers';
 
 export default function Calendar({ gameState }) {
-  const events = [...gameState.seasonTournaments].sort((a, b) => a.startWeek - b.startWeek);
+  const events = [...gameState.events].sort((a, b) => monthIndex(a.month) - monthIndex(b.month));
 
   return (
     <div>
       <div className="page-header">
         <h1>Tournament Calendar</h1>
-        <div className="subtitle">Season {gameState.season} — {events.length} scheduled events</div>
+        <div className="subtitle">Season {gameState.season} — {events.length} events</div>
       </div>
 
       <div className="panel">
@@ -16,40 +16,30 @@ export default function Calendar({ gameState }) {
           <thead>
             <tr>
               <th>Event</th>
+              <th>Type</th>
               <th>Tier</th>
-              <th>Format</th>
+              <th>Month</th>
               <th className="text-center">Teams</th>
+              <th>Format</th>
               <th className="text-right">Prize Pool</th>
               <th>Region</th>
-              <th className="text-center">Weeks</th>
-              <th>Status</th>
+              <th>Invite</th>
             </tr>
           </thead>
           <tbody>
-            {events.map((e) => {
-              const tmpl = gameState.tournamentTemplates.find((t) => t.tournamentId === e.templateId);
-              return (
-                <tr key={e.id}>
-                  <td><Link to={`/tournaments/${e.id}`}>{e.name}</Link></td>
-                  <td><span className={tierBadgeClass(tmpl?.tier || 'C')}>{tmpl?.tier}</span></td>
-                  <td style={{ color: 'var(--text-secondary)' }}>{tmpl?.format}</td>
-                  <td className="text-center">{tmpl?.teamCount}</td>
-                  <td className="text-right">{formatMoney(tmpl?.prizePool || 0)}</td>
-                  <td>{tmpl?.region}</td>
-                  <td className="text-center">W{e.startWeek}–{e.endWeek}</td>
-                  <td>
-                    <span style={{
-                      color: e.status === 'upcoming' ? 'var(--yellow)' :
-                             e.status === 'active' ? 'var(--green)' : 'var(--text-muted)',
-                      fontWeight: 600,
-                      textTransform: 'capitalize',
-                    }}>
-                      {e.status}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
+            {events.map((e) => (
+              <tr key={e.eventId}>
+                <td><Link to={`/tournaments/${e.eventId}`}>{e.name}</Link></td>
+                <td style={{ color: 'var(--text-secondary)' }}>{e.eventType}</td>
+                <td><span className={tierBadgeClass(e.tier)}>{e.tier}</span></td>
+                <td>{e.month}</td>
+                <td className="text-center">{e.teams}</td>
+                <td style={{ color: 'var(--text-muted)', fontSize: 11 }}>{e.format?.replace(/_/g, ' ')}</td>
+                <td className="text-right">{formatMoney(e.prizePool)}</td>
+                <td style={{ color: 'var(--text-secondary)' }}>{e.regionRestriction}</td>
+                <td style={{ color: 'var(--text-muted)', fontSize: 11 }}>{e.inviteMethod}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
