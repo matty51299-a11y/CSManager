@@ -1,0 +1,118 @@
+import MAPS from './maps.js';
+
+function makeMapRatings() {
+  const ratings = {};
+  MAPS.forEach((m) => {
+    ratings[m.mapId] = Math.floor(Math.random() * 30) + 55;
+  });
+  return ratings;
+}
+
+const TEAMS = [
+  {
+    teamId: 'navi',
+    name: 'Natus Vincere',
+    shortName: 'NAVI',
+    region: 'Europe',
+    country: 'UA',
+    reputation: 95,
+    budget: 2400000,
+    ranking: 1,
+    roster: ['s1mple', 'jl', 'im', 'b1t', 'wonderful'],
+    coach: 'B1ad3',
+    mapRatings: makeMapRatings(),
+  },
+  {
+    teamId: 'faze',
+    name: 'FaZe Clan',
+    shortName: 'FaZe',
+    region: 'Europe',
+    country: 'EU',
+    reputation: 93,
+    budget: 2200000,
+    ranking: 2,
+    roster: ['rain', 'frozen', 'ropz', 'broky', 'karrigan'],
+    coach: 'RobbaN',
+    mapRatings: makeMapRatings(),
+  },
+  {
+    teamId: 'vitality',
+    name: 'Team Vitality',
+    shortName: 'Vitality',
+    region: 'Europe',
+    country: 'FR',
+    reputation: 91,
+    budget: 2000000,
+    ranking: 3,
+    roster: ['zywoo', 'apeks', 'spinx', 'flamez', 'mezii'],
+    coach: 'XTQZZZ',
+    mapRatings: makeMapRatings(),
+  },
+  {
+    teamId: 'g2',
+    name: 'G2 Esports',
+    shortName: 'G2',
+    region: 'Europe',
+    country: 'EU',
+    reputation: 90,
+    budget: 1800000,
+    ranking: 4,
+    roster: ['niko', 'hunter', 'monesy', 'nexa', 'heavygod'],
+    coach: 'TBD',
+    mapRatings: makeMapRatings(),
+  },
+  {
+    teamId: 'spirit',
+    name: 'Team Spirit',
+    shortName: 'Spirit',
+    region: 'CIS',
+    country: 'RU',
+    reputation: 88,
+    budget: 1500000,
+    ranking: 5,
+    roster: ['donk', 'chopper', 'magixx', 'zont1x', 'sh1ro'],
+    coach: 'hally',
+    mapRatings: makeMapRatings(),
+  },
+  {
+    teamId: 'mouz',
+    name: 'MOUZ',
+    shortName: 'MOUZ',
+    region: 'Europe',
+    country: 'EU',
+    reputation: 85,
+    budget: 1200000,
+    ranking: 6,
+    roster: ['torzsi', 'jimpphat', 'xertioN', 'siuhy', 'brollan'],
+    coach: 'Torzi',
+    mapRatings: makeMapRatings(),
+  },
+  {
+    teamId: 'liquid',
+    name: 'Team Liquid',
+    shortName: 'Liquid',
+    region: 'Americas',
+    country: 'US',
+    reputation: 84,
+    budget: 1600000,
+    ranking: 7,
+    roster: ['naf', 'elige', 'skullz', 'yekindar', 'jks'],
+    coach: 'adreN',
+    mapRatings: makeMapRatings(),
+  },
+  {
+    teamId: 'heroic',
+    name: 'Heroic',
+    shortName: 'Heroic',
+    region: 'Europe',
+    country: 'DK',
+    reputation: 82,
+    budget: 1000000,
+    ranking: 8,
+    roster: ['stavn', 'TeSeS', 'sjuush', 'jabbi', 'kyxsan'],
+    coach: 'Xizt',
+    mapRatings: makeMapRatings(),
+  },
+];
+
+export default TEAMS;
