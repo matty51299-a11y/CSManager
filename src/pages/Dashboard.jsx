@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { OvrBadge } from '../components/StatBadge';
 import { formatMoney, tierBadgeClass, monthIndex } from '../utils/helpers';
 
-export default function Dashboard({ gameState, continueToNextEvent, enterCurrentEvent, resetCareer }) {
+export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, resetCareer }) {
   const navigate = useNavigate();
   const myTeam = gameState.teams.find((t) => t.teamId === gameState.selectedTeamId);
   const myPlayers = gameState.players.filter((p) => p.teamId === gameState.selectedTeamId && p.status === 'active');
@@ -39,7 +39,7 @@ export default function Dashboard({ gameState, continueToNextEvent, enterCurrent
         </div>
       </div>
 
-      <div className="panel cockpit-panel"><div className="panel-header"><h2>Career Control</h2><button className="ghost-button" onClick={resetCareer}>Reset Career</button></div><div className="panel-body action-row"><strong className="phase-pill">{gameState.currentPhase}</strong><span>Season {gameState.season}, Week {gameState.week}, {gameState.currentMonth}.</span>{gameState.currentPhase !== 'event_active' && <button onClick={continueToNextEvent}>Advance Week / Continue to Next Event</button>}{gameState.currentPhase === 'event_ready' && <button onClick={() => { enterCurrentEvent(); navigate('/event-hub'); }}>Enter Event / Sim Background</button>}{gameState.currentPhase === 'event_active' && <button onClick={() => navigate('/event-hub')}>Open Event Hub</button>}</div></div>
+      <div className="panel cockpit-panel"><div className="panel-header"><h2>Career Control</h2><button className="ghost-button" onClick={resetCareer}>Reset Career</button></div><div className="panel-body action-row"><strong className="phase-pill">{gameState.currentPhase}</strong><span>Season {gameState.season}, Week {gameState.week}, {gameState.currentMonth}.</span>{!gameState.currentPhase.startsWith('event_active') && <button onClick={advanceToNextEvent}>Advance Week / Continue to Next Event</button>}{gameState.currentPhase === 'event_ready' && <button onClick={() => { enterEvent(); navigate('/event-hub'); }}>Enter Event / Sim Background</button>}{gameState.currentPhase.startsWith('event_active') && <button onClick={() => navigate('/event-hub')}>Open Event Hub</button>}</div></div>
 
       <div className="grid-2">
         {myTeam && (

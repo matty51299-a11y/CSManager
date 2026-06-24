@@ -313,3 +313,67 @@ Nothing.
 
 #### Next Recommended Task
 Add richer post-event ranking movement and persistent ranking table updates while keeping the current career loop intact.
+
+### Task 7 — Blank Screen Crash Fix and Career Loop Rebuild (Complete)
+
+- Fixed the runtime crash that blanked the whole app when clicking Sim Match. Root cause: `summarizeMatch()` in `src/utils/tournamentStandings.js` never computed a `.loser` field on match result objects, but both the inbox message builder and `EventHub.jsx`'s match result card read `match.loser.shortName` / `match.loser.name`, throwing `Cannot read properties of undefined (reading 'shortName')` and unmounting the React tree with no boundary to catch it.
+- Added `loser` (and `upset`, derived from ranking gap) computation directly inside `summarizeMatch()` so every match result object is always a complete, safe shape.
+- Added `src/components/ErrorBoundary.jsx`, a class component with `getDerivedStateFromError`/`componentDidCatch` that renders a recovery panel ("Try to recover" / "Reset career & reload") instead of a blank screen for any future unexpected error. Wrapped the app in `src/main.jsx` and around both pre-career and in-career render paths in `src/App.jsx`.
+- Rebuilt the career loop as a single state machine in `src/state/GameStateContext.jsx`, now the canonical game state source (previously a re-export stub). `src/state.js` is now a thin compatibility re-export of the context module.
+- Career phases are now exactly: `no_career`, `team_selection`, `dashboard`, `event_ready`, `event_active_swiss`, `event_active_playoffs`, `event_complete`, `season_complete`.
+- Career state exposes: careerStarted, selectedTeamId, season, week, month, currentPhase, currentEventId, activeTournament, completedEvents, inboxItems, recentResults, rankings.
+- Every button across Dashboard, Calendar and Event Hub now calls one of the real named actions: startCareer, resetCareer, advanceToNextEvent, enterEvent, simUserMatch, simAiMatches/simOtherMatch, advanceSwissRound, generatePlayoffs, simPlayoffRound, completeEvent, returnToDashboard. No dead buttons remain.
+- Fixed a navigation bug found while testing the full flow: clicking Return to Dashboard updated career phase state but did not leave the `/event-hub` route. Added an `EventHubRoute` wrapper in `App.jsx` that explicitly navigates to `/` in addition to calling `returnToDashboard()`.
+- Rebuilt `src/pages/EventHub.jsx` as the main playable career screen: event name/type/prize pool/stage pill, user team and record, a dedicated "Your Match" panel, a separate "Other Matches" section, Swiss standings with status badges, a dedicated Qualified Teams panel and a dedicated Eliminated Teams panel, playoff bracket with user-team highlighting, an event news/results feed, and an event summary panel. The user's team is visually highlighted in match cards, standings rows, qualified/eliminated rows and the bracket.
+- Updated `src/pages/Diagnostics.jsx` careerChecks to the exact required list: career can start, selected team persists, next event can be found, event invite list is generated, enterEvent creates activeTournament, user match can be found, simUserMatch returns a valid result, simAiMatches completes AI matches, Swiss advances correctly (8 qualify), playoffs generate with 8 teams, playoffs produce exactly one champion, event summary is created, returning to Dashboard works, no duplicate teams appear, no team plays itself, inbox items are generated.
+- Added a `noSelfPlay` check and granular error messages to `runTournamentDiagnostics()` in `src/utils/tournamentEngine.js`.
+- Verified the full 25-step MOUZ career flow (reset career → start career → pick MOUZ → dashboard → advance to next event → enter BLAST Bounty Season 1 → sim user match → sim AI matches → advance Swiss rounds → generate playoffs → sim playoff rounds → champion crowned → event summary → return to Dashboard) end-to-end with headless browser automation, including a run where MOUZ was eliminated mid-Swiss, with zero console/page errors at every step.
+- Confirmed `npm run build` and `npm run lint` are clean.
+- Did not touch the spreadsheet importer, transfers, morale, contracts, scouting, advanced VRS, or add any new placeholder screens, per the task's explicit constraints.
+
+#### Files Created
+- src/components/ErrorBoundary.jsx
+
+#### Files Modified
+- src/utils/tournamentStandings.js (added `loser`/`upset` to summarizeMatch)
+- src/state/GameStateContext.jsx (now the canonical state machine implementation)
+- src/state.js (now a thin re-export shim)
+- src/main.jsx (wraps app in ErrorBoundary)
+- src/App.jsx (ErrorBoundary wrapping, EventHubRoute navigation fix, renamed action props)
+- src/pages/StartCareer.jsx (uses currentPhase instead of local state)
+- src/pages/Dashboard.jsx (renamed action props, phase checks)
+- src/pages/Calendar.jsx (renamed action props)
+- src/pages/EventHub.jsx (full rewrite: defensive guards, qualified/eliminated panels, stage pill, finish-event handling)
+- src/utils/tournamentEngine.js (noSelfPlay diagnostic check)
+- src/pages/Diagnostics.jsx (exact required careerChecks list)
+- src/index.css (.error-panel, .error-detail, .event-summary-card, .stage-pill)
+- progress.md
+
+#### Known Limitations
+- Rankings are still simplified.
+- Event invites are still basic ranking-based placeholders.
+- Non-16-team events may still use simplified handling.
+- No transfers yet.
+- No contracts yet.
+- No morale yet.
+- No full VRS yet.
+- Career persistence is still localStorage-only.
+- One pre-existing duplicate player (bobeksde) remains in the spreadsheet data and is unrelated to this crash; intentionally not touched since the spreadsheet importer was not the cause of the crash.
+
+#### Manual Testing Steps
+1. Run `npm install` if dependencies are missing.
+2. Run `npm run dev`.
+3. From Diagnostics or Dashboard, reset career.
+4. Start a new career and select MOUZ.
+5. Confirm Dashboard shows MOUZ, phase `dashboard`.
+6. Click Advance to Next Event until BLAST Bounty Season 1 is reached and an Enter Event control appears.
+7. Click Enter Event and confirm Event Hub opens with MOUZ highlighted throughout.
+8. Click Play / Sim Your Match and confirm no blank screen, console errors or crash — a match result card appears.
+9. Click Sim AI Matches, then Advance Swiss Round, repeating until 8 teams qualify.
+10. Click Generate Playoffs, then Sim Playoff Round (and Play / Sim Your Match when MOUZ is in a bracket match) until exactly one champion is crowned.
+11. Confirm the event summary panel appears with champion, runner-up, record, prize money and biggest upset.
+12. Click Return to Dashboard and confirm the route changes back to `/` and the Dashboard reflects the completed event.
+13. Open Diagnostics and confirm all career-flow checks pass.
+
+#### Next Recommended Task
+Add richer post-event ranking movement and persistent ranking table updates while keeping the current career loop intact (still the top recommended next step from Task 6, now unblocked since the loop itself is verified stable end-to-end).
