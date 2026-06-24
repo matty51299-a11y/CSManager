@@ -1,3 +1,5 @@
+import { getVrsMultiplier } from './eventPrizeEngine.js';
+
 function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 
 export function initializeVrsRankings(teams = []) {
@@ -61,21 +63,20 @@ export function getInviteStatus(event, rankings, teams, teamId, existingSnapshot
   };
 }
 
+// Event ranking weight now comes from the shared prize/weighting engine so
+// bigger events (Major, IEM Championship) move the rankings more than smaller
+// ones (BLAST Bounty, StarSeries, Regional Challenger).
 function eventWeight(event) {
-  const text = `${event?.name || ''} ${event?.type || ''} ${event?.eventType || ''} ${event?.tier || ''}`.toLowerCase();
-  if (text.includes('major')) return 1.8;
-  if (text.includes('iem championship') || text.includes('katowice') || text.includes('cologne')) return 1.45;
-  if (text.includes('rivals') || text.includes('pro league')) return 1.25;
-  if (text.includes('pgl') || text.includes('bounty')) return 1.05;
-  if (text.includes('regional')) return 0.7;
-  return 1;
+  return getVrsMultiplier(event);
 }
 
 export function updateRankingsAfterEvent(rankings = [], tournament, teams = []) {
   const beforeRows = getRankingRows(rankings, teams);
   const beforeById = new Map(beforeRows.map((row) => [row.teamId, row]));
   const mutable = new Map(rankings.map((row) => [row.teamId, { ...row, lastRank: beforeById.get(row.teamId)?.currentRank || row.currentRank }]));
-  const matches = [
+  // Background events provide a flat allMatches list; interactive events expose
+  // swiss/playoff rounds. Support both shapes.
+  const matches = tournament?.allMatches || [
     ...(tournament?.swiss?.rounds || []).flatMap((round) => round.matches || []),
     ...(tournament?.playoffs?.rounds || []).flatMap((round) => (round.matches || []).map((match) => match.result).filter(Boolean)),
   ];
