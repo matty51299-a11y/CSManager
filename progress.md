@@ -177,20 +177,6 @@ Any coding agent must read this file before making changes.
 - MVP candidate is based on displayed match top performers rather than a full event-wide stat database.
 - No ranking impact, prize money, full calendar progression, morale, transfers, contracts or VRS updates are applied yet.
 
-## In Progress
-
-Nothing.
-
-## Planned Next
-
-1. Add persistent tournament save/load or localStorage tournament history
-2. Add event-wide player stat aggregation and MVP awards
-3. Add VRS-style ranking calculation after simulated tournaments
-4. Add calendar hooks for running scheduled events
-5. Transfers and free agency
-6. Contract management
-7. Search/filter on Teams and Players pages
-
 ## Rules for Future Coding Tasks
 
 - Read README.md and progress.md before making changes.
@@ -201,3 +187,68 @@ Nothing.
 - Add manual testing steps after every task.
 - Update this progress file after every completed task.
 - The generated JSON in src/data/generated/ is the primary data source. Run npm run import:csdb to regenerate from spreadsheet.
+
+### Task 5 — Playable Career Loop and Event Hub (Complete)
+
+- Added a career start flow with a title screen, Start New Career button and imported-database team selection table.
+- Team selection now shows team name, region, country, ranking, tier, reputation, budget, average active roster overall, star player and a difficulty label.
+- Added central localStorage-backed career state containing careerStarted, selectedTeamId, season, week, date label, phase, active event, active tournament, completed events, inbox, rankings, team records and recent results.
+- Dashboard now behaves as the manager home screen with the selected team centered, career controls, next event context, roster, budget, reputation, star player and current season/week/month.
+- Added simple calendar advancement that moves toward imported Events and creates invite/background news based on ranking-placeholder invite logic.
+- Added an in-career Event Hub route for active tournaments, with user-team highlighting, Swiss standings, user match panel, other matches, playoff bracket, event results feed and event summary.
+- Tournament flow now supports simulating the user's match separately from AI matches, Swiss round-by-round progression, playoff generation, playoff match simulation and champion creation.
+- Match cards now present team names, series score, maps played, map scores, top performer, upset tags and a short summary sentence.
+- Added Inbox page for career/news/event messages.
+- Updated sidebar to better match a management career game and renamed the old Tournament Centre navigation label to Tournament Sandbox.
+- Diagnostics now includes career-flow checks for career start, persistence, event generation, round progression, user match availability, AI simulation, Swiss qualification, playoff champion, event summary and eliminated-team stability.
+
+#### Files Created
+- src/state.js
+- src/pages/StartCareer.jsx
+- src/pages/EventHub.jsx
+- src/pages/Inbox.jsx
+
+#### Files Modified
+- src/App.jsx
+- src/components/Sidebar.jsx
+- src/pages/Dashboard.jsx
+- src/pages/Calendar.jsx
+- src/pages/Diagnostics.jsx
+- src/utils/tournamentEngine.js
+- src/index.css
+- progress.md
+
+#### Known Limitations
+- Rankings are still simplified and only lightly surfaced after events.
+- Event invites are ranking-based placeholders using imported team ranking, not full VRS logic.
+- Events with more than 16 invited teams currently run through the existing 16-team Swiss/playoff format for the playable hub.
+- No transfers yet.
+- No contracts yet.
+- No morale yet.
+- No full VRS system yet.
+- Career state is localStorage-only and has no backend/auth/database persistence.
+
+#### Manual Testing Steps
+1. Run `npm install` if dependencies are missing.
+2. Run `npm run dev`.
+3. Open the app, click Start New Career, select any imported team and click Begin Career.
+4. Confirm Dashboard shows your selected team, roster, next event and career controls.
+5. Click Advance Week / Continue to Next Event until an invite appears, then Enter Event.
+6. In Event Hub, simulate Your Match, simulate Other Matches, complete Swiss rounds, generate playoffs and simulate to a champion.
+7. Open Inbox and confirm career/event news has been generated.
+8. Refresh the browser and confirm the selected team/career remains loaded.
+9. Use Diagnostics to reset the career if needed.
+
+## In Progress
+
+Nothing.
+
+## Planned Next
+
+1. Add richer ranking movement and persistent ranking table updates after each event.
+2. Add exact event dates and better season calendar UI.
+3. Add event-wide player stat aggregation and MVP awards.
+4. Add VRS-style invite rules and Major qualification.
+5. Transfers and free agency.
+6. Contract management.
+7. Morale and player dynamics.

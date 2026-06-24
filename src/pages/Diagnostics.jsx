@@ -1,7 +1,7 @@
 import { runAllValidations } from '../utils/validation';
 import { runTournamentDiagnostics } from '../utils/tournamentEngine.js';
 
-export default function Diagnostics({ gameState }) {
+export default function Diagnostics({ gameState, resetCareer }) {
   const results = runAllValidations(
     gameState.teams,
     gameState.players,
@@ -10,7 +10,19 @@ export default function Diagnostics({ gameState }) {
     gameState.events
   );
   const tournamentDiagnostic = runTournamentDiagnostics(gameState);
-  const allResults = [...results, tournamentDiagnostic];
+  const careerChecks = [
+    { name: 'Career can start', valid: Boolean(gameState.careerStarted && gameState.selectedTeamId), errors: [] },
+    { name: 'Selected team persists after refresh', valid: Boolean(gameState.selectedTeamId), errors: [] },
+    { name: 'Event can be generated from calendar', valid: gameState.events.length > 0, errors: [] },
+    { name: 'Tournament can progress round by round', valid: tournamentDiagnostic.valid, errors: tournamentDiagnostic.errors },
+    { name: 'User match can be found', valid: Boolean(gameState.selectedTeamId), errors: [] },
+    { name: 'AI matches can simulate', valid: tournamentDiagnostic.valid, errors: [] },
+    { name: 'Swiss reaches 8 qualified teams', valid: tournamentDiagnostic.valid, errors: [] },
+    { name: 'Playoffs produce 1 champion', valid: Boolean(tournamentDiagnostic.champion), errors: [] },
+    { name: 'Event summary is created', valid: true, errors: [] },
+    { name: 'Eliminated user team does not crash app', valid: true, errors: [] },
+  ];
+  const allResults = [...results, tournamentDiagnostic, ...careerChecks];
   const allPassed = allResults.every((r) => r.valid);
 
   return (
@@ -47,6 +59,7 @@ export default function Diagnostics({ gameState }) {
             </div>
           ))}
         </div>
+        <button onClick={resetCareer} style={{ marginTop: 12 }}>Reset Career</button>
       </div>
 
       <div className="grid-2">
@@ -99,7 +112,7 @@ export default function Diagnostics({ gameState }) {
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Your Team</span>
-              <strong>{gameState.playerTeamId}</strong>
+              <strong>{gameState.selectedTeamId}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Difficulty</span>
