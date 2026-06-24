@@ -34,7 +34,8 @@ export function summarizeMatch(match) {
   const roundsB = match.maps.reduce((sum, map) => sum + map.scoreB, 0);
   const allStats = match.maps.flatMap((map) => [...map.teamAStats, ...map.teamBStats]);
   const topPerformer = allStats.sort((a, b) => b.rating - a.rating || b.kills - a.kills)[0];
-  const rankingGap = Number(match.winner.ranking || 999) - Number((match.winner.teamId === match.teamA.teamId ? match.teamB : match.teamA).ranking || 999);
+  const loser = match.winner.teamId === match.teamA.teamId ? match.teamB : match.teamA;
+  const rankingGap = Number(match.winner.ranking || 999) - Number(loser.ranking || 999);
   return {
     ...match,
     mapsWonA,
@@ -42,6 +43,7 @@ export function summarizeMatch(match) {
     roundsA,
     roundsB,
     topPerformer,
+    loser,
     upset: rankingGap >= 10,
   };
 }

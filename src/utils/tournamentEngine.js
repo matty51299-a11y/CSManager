@@ -32,7 +32,14 @@ export function runTournamentDiagnostics({ events = [], teams = [], players = []
   while (!tournament.swiss.complete && guard < 8) { tournament = simulateSwissRound(tournament, { players, teamMapRatings }); guard += 1; }
   tournament = generatePlayoffs(tournament);
   while (!tournament.champion && guard < 12) { tournament = simulatePlayoffRound(tournament, { players, teamMapRatings }); guard += 1; }
-  return { name: 'Tournament simulation diagnostic', valid: unique && tournament.swiss.qualified.length === 8 && Boolean(tournament.champion), errors: unique ? [] : ['Duplicate teams found in generated tournament'], champion: tournament.champion };
+  const allMatches = [...tournament.swiss.rounds.flatMap((r) => r.matches), ...(tournament.playoffs?.rounds || []).flatMap((r) => r.matches.map((m) => m.result).filter(Boolean))];
+  const noSelfPlay = allMatches.every((m) => m.teamA.teamId !== m.teamB.teamId);
+  const errors = [];
+  if (!unique) errors.push('Duplicate teams found in generated tournament');
+  if (!noSelfPlay) errors.push('A team was paired against itself');
+  if (tournament.swiss.qualified.length !== 8) errors.push(`Swiss qualified ${tournament.swiss.qualified.length} teams instead of 8`);
+  if (!tournament.champion) errors.push('Playoffs did not produce exactly one champion');
+  return { name: 'Tournament simulation diagnostic', valid: unique && noSelfPlay && tournament.swiss.qualified.length === 8 && Boolean(tournament.champion), errors, champion: tournament.champion };
 }
 
 function cloneSwiss(swiss) {

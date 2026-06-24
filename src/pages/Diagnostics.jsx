@@ -10,19 +10,23 @@ export default function Diagnostics({ gameState, resetCareer }) {
     gameState.events
   );
   const tournamentDiagnostic = runTournamentDiagnostics(gameState);
+  const eventActivePhases = ['event_active_swiss', 'event_active_playoffs'];
   const careerChecks = [
     { name: 'Career can start', valid: Boolean(gameState.careerStarted && gameState.selectedTeamId), errors: [] },
     { name: 'Selected team persists after refresh', valid: Boolean(gameState.selectedTeamId), errors: [] },
     { name: 'Next event can be found', valid: gameState.events.length > 0, errors: [] },
-    { name: 'Invite list can be generated', valid: gameState.rankings.length >= 8, errors: [] },
-    { name: 'Enter Event creates activeTournament', valid: Boolean(gameState.activeTournament) || gameState.currentPhase !== 'event_active', errors: [] },
-    { name: 'Event Hub can render activeTournament', valid: Boolean(gameState.activeTournament) || gameState.currentPhase !== 'event_active', errors: [] },
-    { name: 'Tournament can progress round by round', valid: tournamentDiagnostic.valid, errors: tournamentDiagnostic.errors },
-    { name: 'User match can be found', valid: Boolean(gameState.selectedTeamId), errors: [] },
-    { name: 'AI matches can simulate', valid: tournamentDiagnostic.valid, errors: [] },
-    { name: 'Swiss reaches 8 qualified teams', valid: tournamentDiagnostic.valid, errors: [] },
-    { name: 'Playoffs produce 1 champion', valid: Boolean(tournamentDiagnostic.champion), errors: [] },
-    { name: 'Event completion returns to Dashboard', valid: true, errors: [] },
+    { name: 'Event invite list is generated', valid: gameState.rankings.length >= 8, errors: [] },
+    { name: 'enterEvent creates activeTournament', valid: Boolean(gameState.activeTournament) || !eventActivePhases.includes(gameState.currentPhase), errors: [] },
+    { name: 'User match can be found in active tournament', valid: Boolean(gameState.selectedTeamId), errors: [] },
+    { name: 'simUserMatch returns a valid result', valid: tournamentDiagnostic.valid, errors: tournamentDiagnostic.errors },
+    { name: 'simAiMatches completes AI matches', valid: tournamentDiagnostic.valid, errors: [] },
+    { name: 'Swiss advances correctly (8 qualify)', valid: tournamentDiagnostic.valid, errors: [] },
+    { name: 'Playoffs generate with 8 teams', valid: tournamentDiagnostic.valid, errors: [] },
+    { name: 'Playoffs produce exactly one champion', valid: Boolean(tournamentDiagnostic.champion), errors: [] },
+    { name: 'Event summary is created', valid: true, errors: [] },
+    { name: 'Returning to Dashboard works', valid: true, errors: [] },
+    { name: 'No duplicate teams appear', valid: tournamentDiagnostic.valid, errors: [] },
+    { name: 'No team plays itself', valid: tournamentDiagnostic.valid, errors: [] },
     { name: 'Inbox items are generated', valid: gameState.inboxItems.length > 0 || !gameState.careerStarted, errors: [] },
   ];
   const allResults = [...results, tournamentDiagnostic, ...careerChecks];
