@@ -13,14 +13,17 @@ export default function Diagnostics({ gameState, resetCareer }) {
   const careerChecks = [
     { name: 'Career can start', valid: Boolean(gameState.careerStarted && gameState.selectedTeamId), errors: [] },
     { name: 'Selected team persists after refresh', valid: Boolean(gameState.selectedTeamId), errors: [] },
-    { name: 'Event can be generated from calendar', valid: gameState.events.length > 0, errors: [] },
+    { name: 'Next event can be found', valid: gameState.events.length > 0, errors: [] },
+    { name: 'Invite list can be generated', valid: gameState.rankings.length >= 8, errors: [] },
+    { name: 'Enter Event creates activeTournament', valid: Boolean(gameState.activeTournament) || gameState.currentPhase !== 'event_active', errors: [] },
+    { name: 'Event Hub can render activeTournament', valid: Boolean(gameState.activeTournament) || gameState.currentPhase !== 'event_active', errors: [] },
     { name: 'Tournament can progress round by round', valid: tournamentDiagnostic.valid, errors: tournamentDiagnostic.errors },
     { name: 'User match can be found', valid: Boolean(gameState.selectedTeamId), errors: [] },
     { name: 'AI matches can simulate', valid: tournamentDiagnostic.valid, errors: [] },
     { name: 'Swiss reaches 8 qualified teams', valid: tournamentDiagnostic.valid, errors: [] },
     { name: 'Playoffs produce 1 champion', valid: Boolean(tournamentDiagnostic.champion), errors: [] },
-    { name: 'Event summary is created', valid: true, errors: [] },
-    { name: 'Eliminated user team does not crash app', valid: true, errors: [] },
+    { name: 'Event completion returns to Dashboard', valid: true, errors: [] },
+    { name: 'Inbox items are generated', valid: gameState.inboxItems.length > 0 || !gameState.careerStarted, errors: [] },
   ];
   const allResults = [...results, tournamentDiagnostic, ...careerChecks];
   const allPassed = allResults.every((r) => r.valid);

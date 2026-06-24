@@ -252,3 +252,64 @@ Nothing.
 5. Transfers and free agency.
 6. Contract management.
 7. Morale and player dynamics.
+
+### Task 6 — Career Loop Repair Pass (Complete)
+
+- Repaired the central career state around explicit playable phases: `team_selection`, `dashboard`, `advancing`, `event_ready`, `event_active`, `event_complete` and `offseason_placeholder`.
+- Added `src/state/GameStateContext.jsx` as the context-facing entry point for shared game state, while preserving the existing `useGameState` hook used by the app.
+- Career state now exposes the required fields: career start flag, selected team, season/week/month, current phase, current/active event IDs, active tournament, completed events, inbox items, recent results, rankings and team records.
+- LocalStorage persistence now uses the repaired v2 career state shape so refreshes keep the selected career and active tournament.
+- Dashboard buttons now call real career actions: continue to next event, enter/sim current event, open Event Hub and reset career.
+- Continue to Next Event now uses imported Events data ordered by month and sets the career into `event_ready` for the reached event.
+- Event invites use the simplified ranking cut rules requested for 8/16/24/32-team events.
+- Enter Event now creates `activeTournament`, moves the career to `event_active`, and the Dashboard navigates to the Event Hub.
+- If the selected team is not invited, the same action simulates the event in the background, creates a champion summary and creates inbox/news items.
+- Event Hub now reads the career `activeTournament`, shows pending Swiss pairings, highlights the user team, separates user match simulation from AI match simulation, supports playoff generation/simulation and provides a Return to Dashboard action after the champion is produced.
+- Calendar actions now use the repaired career actions instead of disconnected placeholder handlers.
+- Added darker cockpit styling for career controls, event hero, match cards, brackets, highlighted user rows and status badges.
+
+#### Files Created
+- src/state/GameStateContext.jsx
+
+#### Files Modified
+- src/state.js
+- src/pages/Dashboard.jsx
+- src/pages/EventHub.jsx
+- src/pages/Calendar.jsx
+- src/App.jsx
+- src/index.css
+- progress.md
+
+#### Known Limitations
+- Rankings are still simplified.
+- Event invites use ranking placeholders.
+- Non-16-team events currently use the top 16 invited teams in the existing Swiss/playoff event hub format.
+- No transfers yet.
+- No morale yet.
+- No contracts yet.
+- No full VRS yet.
+- Career persistence is still localStorage-only.
+
+#### Manual Testing Steps
+1. Run `npm install` if dependencies are missing.
+2. Run `npm run dev`.
+3. Reset career from Diagnostics or the Dashboard control.
+4. Start a new career and select MOUZ.
+5. Confirm Dashboard shows MOUZ and phase `dashboard`.
+6. Click Advance Week / Continue to Next Event.
+7. Confirm BLAST Bounty Season 1 is reached and phase is `event_ready`.
+8. Click Enter Event / Sim Background.
+9. If invited, confirm Event Hub opens and MOUZ is highlighted.
+10. Click Play / Sim Your Match.
+11. Confirm a match result card appears with series score, maps, top performer and summary text.
+12. Click Sim AI Matches.
+13. Click Generate Next Round once the round is complete.
+14. Repeat Swiss rounds until 8 teams qualify.
+15. Generate playoffs and simulate playoff rounds until one champion is crowned.
+16. Confirm the event summary appears.
+17. Click Return to Dashboard.
+18. Confirm Dashboard shows the completed event context and recent results.
+19. Continue to the next imported event.
+
+#### Next Recommended Task
+Add richer post-event ranking movement and persistent ranking table updates while keeping the current career loop intact.
