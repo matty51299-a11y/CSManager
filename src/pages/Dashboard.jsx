@@ -2,13 +2,15 @@ import { Link } from 'react-router-dom';
 import { OvrBadge } from '../components/StatBadge';
 import { formatMoney, tierBadgeClass, monthIndex } from '../utils/helpers';
 
-export default function Dashboard({ gameState }) {
-  const myTeam = gameState.teams.find((t) => t.teamId === gameState.playerTeamId);
-  const myPlayers = gameState.players.filter((p) => p.teamId === gameState.playerTeamId && p.status === 'active');
+export default function Dashboard({ gameState, advanceTime, enterEvent }) {
+  const myTeam = gameState.teams.find((t) => t.teamId === gameState.selectedTeamId);
+  const myPlayers = gameState.players.filter((p) => p.teamId === gameState.selectedTeamId && p.status === 'active');
   const topTeams = [...gameState.teams].sort((a, b) => a.ranking - b.ranking).slice(0, 10);
-  const nextEvents = [...gameState.events]
-    .sort((a, b) => monthIndex(a.month) - monthIndex(b.month))
-    .slice(0, 5);
+  const nextEvents = [...gameState.events].sort((a, b) => monthIndex(a.month) - monthIndex(b.month));
+  const completedIds = new Set(gameState.completedEvents.map((e) => e.eventId));
+  const nextEvent = nextEvents.find((e) => !completedIds.has(e.eventId));
+  const starPlayer = [...myPlayers].sort((a, b) => b.overall - a.overall)[0];
+  const averageOverall = Math.round(myPlayers.reduce((sum, p) => sum + Number(p.overall || 0), 0) / Math.max(1, myPlayers.length));
 
   return (
     <div>
@@ -36,6 +38,8 @@ export default function Dashboard({ gameState }) {
         </div>
       </div>
 
+      <div className="panel"><div className="panel-header"><h2>Career Control</h2><button onClick={advanceTime}>Advance Week / Continue to Next Event</button></div><div className="panel-body"><strong>{gameState.currentPhase}</strong> · Season {gameState.season}, Week {gameState.week}, {gameState.currentDateLabel}. {gameState.activeEventId && <button style={{ marginLeft: 12 }} onClick={() => enterEvent(gameState.activeEventId)}>Enter Event</button>}</div></div>
+
       <div className="grid-2">
         {myTeam && (
           <div className="panel">
@@ -50,12 +54,12 @@ export default function Dashboard({ gameState }) {
                   <div className="value">#{myTeam.ranking}</div>
                 </div>
                 <div className="stat-item">
-                  <div className="label">Tier</div>
-                  <div className="value">{myTeam.tier}</div>
+                  <div className="label">Avg Overall</div>
+                  <div className="value">{averageOverall}</div>
                 </div>
                 <div className="stat-item">
-                  <div className="label">Reputation</div>
-                  <div className="value">{myTeam.reputation}</div>
+                  <div className="label">Star Player</div>
+                  <div className="value">{starPlayer?.gamertag || '—'}</div>
                 </div>
                 <div className="stat-item">
                   <div className="label">Budget</div>
@@ -116,7 +120,7 @@ export default function Dashboard({ gameState }) {
 
       <div className="panel" style={{ marginTop: 16 }}>
         <div className="panel-header">
-          <h2>Upcoming Events</h2>
+          <h2>Next Event: {nextEvent?.name || 'None'}</h2>
           <Link to="/calendar">Full Calendar</Link>
         </div>
         <table>
@@ -131,7 +135,7 @@ export default function Dashboard({ gameState }) {
             </tr>
           </thead>
           <tbody>
-            {nextEvents.map((e) => (
+            {nextEvents.slice(0, 5).map((e) => (
               <tr key={e.eventId}>
                 <td><Link to={`/tournaments/${e.eventId}`}>{e.name}</Link></td>
                 <td style={{ color: 'var(--text-secondary)' }}>{e.eventType}</td>
