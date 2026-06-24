@@ -1,8 +1,9 @@
-// Small horizontal tracker showing the stages of the current event's format
-// and highlighting which stage is live.
-export default function StageTracker({ format, tournament }) {
-  const names = format?.stageNames || [];
-  const activeIndex = tournament?.champion || tournament?.playoffs ? names.length - 1 : 0;
+// Horizontal tracker showing the live format's progressive stages and which
+// step is currently active. Steps and the active index come from the model so
+// they reflect real format progress (e.g. Round of 32 -> ... -> Champion).
+export default function StageTracker({ model }) {
+  const names = model?.trackerSteps || [];
+  const activeIndex = model?.activeTrackerIndex ?? 0;
   return (
     <div className="stage-tracker">
       {names.map((name, index) => (

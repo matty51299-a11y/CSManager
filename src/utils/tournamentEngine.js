@@ -107,7 +107,9 @@ export function generateEventSummary(tournament, userTeamId) {
 }
 
 export function buildEventStats(tournament) {
-  const matches = [
+  // Live (interactive) tournaments expose a flat allMatches list; legacy Swiss
+  // tournaments expose swiss/playoff rounds. Support both shapes.
+  const matches = tournament?.allMatches || [
     ...(tournament?.swiss?.rounds || []).flatMap((round) => round.matches || []),
     ...(tournament?.playoffs?.rounds || []).flatMap((round) => (round.matches || []).map((m) => m.result).filter(Boolean)),
   ];
