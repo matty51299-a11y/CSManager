@@ -435,3 +435,49 @@ Add richer post-event ranking movement and persistent ranking table updates whil
 
 #### Next Recommended Task
 Add post-event ranking movement and persistent ranking table updates using the new dated calendar/event summary foundation.
+
+### Task 9 — Full-Screen Tournament Overlay Rebuild (Complete)
+
+- Replaced the Event Hub implementation with a dedicated full-screen tournament overlay entry point in `src/pages/EventOverlay.jsx`, while keeping `src/pages/EventHub.jsx` as the route-compatible export.
+- Added clean event overlay components for the live control header, event tabs, left match rail, center tournament hero panel, right sidebar, Swiss view, bracket view, map pool preview, results feed and placements/prize panel.
+- Reworked the tournament screen into a broadcast-style event mode with a thin top event bar, live event tabs, stacked current-round match rail, central Swiss/playoff hero content and dense right-side team/match/results/prize panels.
+- Added CS-specific matchup context using existing roster, team strength and map-rating logic: overall, AWP, entry, clutch, IGL/calling and map pool comparisons plus projected map edge/veto style previews.
+- Preserved the existing career/event state actions for simming the user match, simming other Swiss matches, advancing Swiss rounds, generating playoffs, simming playoff rounds and finishing the event.
+- Kept date-based event context visible in the overlay header and did not change transfers, morale, contracts, scouting, advanced VRS or the spreadsheet importer.
+- Added dedicated overlay CSS with navy/blue-black grid background, glass panels, compact broadcast typography, cyan/green user-team highlighting and responsive full-screen layout rules.
+
+#### Files Created
+- src/pages/EventOverlay.jsx
+- src/components/event/EventHeader.jsx
+- src/components/event/EventTabs.jsx
+- src/components/event/EventMatchRail.jsx
+- src/components/event/EventMainPanel.jsx
+- src/components/event/EventSidebar.jsx
+- src/components/event/EventResultsFeed.jsx
+- src/components/event/EventPlacementsPanel.jsx
+- src/components/event/EventBracketView.jsx
+- src/components/event/EventSwissView.jsx
+- src/components/event/EventMapPoolPreview.jsx
+- src/components/event/eventOverlayUtils.js
+
+#### Files Modified
+- src/pages/EventHub.jsx
+- src/index.css
+- progress.md
+
+#### Known Limitations
+- The overlay uses the existing simplified Swiss/playoff tournament engine and simplified invite/ranking logic.
+- Map veto/pick preview is projected from team map ratings and strength breakdowns rather than a fully persistent veto history system.
+- Event-wide player stats still come from simulated match summaries and are not yet persisted to individual player career histories.
+
+#### Manual Testing Steps
+1. Run `npm run build`.
+2. Run `npm run lint`.
+3. Run `npm run dev`.
+4. Reset career if needed, start a career and select MOUZ.
+5. Advance to the next event, enter the event and confirm the Event Hub opens as a full-screen tournament overlay.
+6. Confirm the top header bar shows event dates, status, record, teams alive, best finish and action buttons.
+7. Confirm the event tabs, left match rail, central Swiss/playoff hero area and right sidebar are visible.
+8. Click Sim This Match from the right sidebar and confirm the user result appears in the overlay.
+9. Click Sim Other Matches / Sim Round and Advance Round until Swiss completes.
+10. Generate playoffs, sim playoff rounds and confirm the bracket, results feed, placements panel and champion state update.
