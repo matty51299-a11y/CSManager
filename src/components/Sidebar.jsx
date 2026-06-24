@@ -18,6 +18,7 @@ export default function Sidebar({ gameState }) {
         <NavLink to="/rankings">Rankings</NavLink>
         <NavLink to="/calendar">Calendar</NavLink>
         <NavLink to="/roster">Roster</NavLink>
+        <NavLink to="/match-centre">Match Centre</NavLink>
         <NavLink to="/diagnostics">Diagnostics</NavLink>
       </nav>
     </div>
