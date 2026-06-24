@@ -1,8 +1,9 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { OvrBadge } from '../components/StatBadge';
 import { formatMoney, tierBadgeClass, monthIndex } from '../utils/helpers';
 
-export default function Dashboard({ gameState, advanceTime, enterEvent }) {
+export default function Dashboard({ gameState, continueToNextEvent, enterCurrentEvent, resetCareer }) {
+  const navigate = useNavigate();
   const myTeam = gameState.teams.find((t) => t.teamId === gameState.selectedTeamId);
   const myPlayers = gameState.players.filter((p) => p.teamId === gameState.selectedTeamId && p.status === 'active');
   const topTeams = [...gameState.teams].sort((a, b) => a.ranking - b.ranking).slice(0, 10);
@@ -38,7 +39,7 @@ export default function Dashboard({ gameState, advanceTime, enterEvent }) {
         </div>
       </div>
 
-      <div className="panel"><div className="panel-header"><h2>Career Control</h2><button onClick={advanceTime}>Advance Week / Continue to Next Event</button></div><div className="panel-body"><strong>{gameState.currentPhase}</strong> · Season {gameState.season}, Week {gameState.week}, {gameState.currentDateLabel}. {gameState.activeEventId && <button style={{ marginLeft: 12 }} onClick={() => enterEvent(gameState.activeEventId)}>Enter Event</button>}</div></div>
+      <div className="panel cockpit-panel"><div className="panel-header"><h2>Career Control</h2><button className="ghost-button" onClick={resetCareer}>Reset Career</button></div><div className="panel-body action-row"><strong className="phase-pill">{gameState.currentPhase}</strong><span>Season {gameState.season}, Week {gameState.week}, {gameState.currentMonth}.</span>{gameState.currentPhase !== 'event_active' && <button onClick={continueToNextEvent}>Advance Week / Continue to Next Event</button>}{gameState.currentPhase === 'event_ready' && <button onClick={() => { enterCurrentEvent(); navigate('/event-hub'); }}>Enter Event / Sim Background</button>}{gameState.currentPhase === 'event_active' && <button onClick={() => navigate('/event-hub')}>Open Event Hub</button>}</div></div>
 
       <div className="grid-2">
         {myTeam && (
@@ -120,7 +121,7 @@ export default function Dashboard({ gameState, advanceTime, enterEvent }) {
 
       <div className="panel" style={{ marginTop: 16 }}>
         <div className="panel-header">
-          <h2>Next Event: {nextEvent?.name || 'None'}</h2>
+          <h2>Next Event: {gameState.currentEventId ? gameState.events.find((e) => e.eventId === gameState.currentEventId)?.name : nextEvent?.name || 'None'}</h2>
           <Link to="/calendar">Full Calendar</Link>
         </div>
         <table>

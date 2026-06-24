@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { tierBadgeClass, formatMoney, monthIndex } from '../utils/helpers';
 
-export default function Calendar({ gameState, advanceTime, enterEvent }) {
+export default function Calendar({ gameState, continueToNextEvent, enterCurrentEvent }) {
   const events = [...gameState.events].sort((a, b) => monthIndex(a.month) - monthIndex(b.month));
 
   return (
@@ -37,7 +37,7 @@ export default function Calendar({ gameState, advanceTime, enterEvent }) {
                 <td style={{ color: 'var(--text-muted)', fontSize: 11 }}>{e.format?.replace(/_/g, ' ')}</td>
                 <td className="text-right">{formatMoney(e.prizePool)}</td>
                 <td style={{ color: 'var(--text-secondary)' }}>{e.regionRestriction}</td>
-                <td style={{ color: 'var(--text-muted)', fontSize: 11 }}>{e.inviteMethod}</td><td>{gameState.activeEventId === e.eventId ? <button onClick={() => enterEvent(e.eventId)}>Enter Event</button> : <button onClick={advanceTime}>Continue</button>}</td>
+                <td style={{ color: 'var(--text-muted)', fontSize: 11 }}>{e.inviteMethod}</td><td>{gameState.activeEventId === e.eventId ? <button onClick={enterCurrentEvent}>Enter Event</button> : <button onClick={continueToNextEvent}>Continue</button>}</td>
               </tr>
             ))}
           </tbody>

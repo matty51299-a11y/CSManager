@@ -30,7 +30,7 @@ export default function App() {
     <Route path="/rankings" element={<Rankings gameState={gameState} />} />
     <Route path="/calendar" element={<Calendar {...actions} />} />
     <Route path="/inbox" element={<Inbox gameState={gameState} />} />
-    <Route path="/event-hub" element={<EventHub gameState={gameState} updateTournament={actions.updateTournament} />} />
+    <Route path="/event-hub" element={<EventHub gameState={gameState} updateTournament={actions.updateTournament} returnToDashboard={actions.returnToDashboard} />} />
     <Route path="/tournaments/:tournamentId" element={<TournamentDetail gameState={gameState} />} />
     <Route path="/roster" element={<Roster gameState={gameState} />} />
     <Route path="/match-centre" element={<MatchCentre gameState={gameState} />} />
