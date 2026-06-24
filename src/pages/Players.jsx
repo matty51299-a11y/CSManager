@@ -48,14 +48,14 @@ export default function Players({ gameState }) {
               <th onClick={() => handleSort('age')} style={{ cursor: 'pointer' }} className="text-right">Age{sortArrow('age')}</th>
               <th onClick={() => handleSort('overall')} style={{ cursor: 'pointer' }} className="text-right">OVR{sortArrow('overall')}</th>
               <th onClick={() => handleSort('potential')} style={{ cursor: 'pointer' }} className="text-right">POT{sortArrow('potential')}</th>
-              <th onClick={() => handleSort('aim')} style={{ cursor: 'pointer' }} className="text-right">AIM{sortArrow('aim')}</th>
-              <th onClick={() => handleSort('awp')} style={{ cursor: 'pointer' }} className="text-right">AWP{sortArrow('awp')}</th>
               <th onClick={() => handleSort('salary')} style={{ cursor: 'pointer' }} className="text-right">Salary{sortArrow('salary')}</th>
+              <th onClick={() => handleSort('contractYears')} style={{ cursor: 'pointer' }} className="text-right">Contract{sortArrow('contractYears')}</th>
+              <th onClick={() => handleSort('buyout')} style={{ cursor: 'pointer' }} className="text-right">Buyout{sortArrow('buyout')}</th>
             </tr>
           </thead>
           <tbody>
             {sorted.map((p) => (
-              <tr key={p.playerId}>
+              <tr key={p.playerId + p.teamId}>
                 <td><Link to={`/players/${p.playerId}`}>{p.gamertag}</Link></td>
                 <td><Link to={`/teams/${p.teamId}`}>{teamMap[p.teamId] || 'FA'}</Link></td>
                 <td style={{ color: 'var(--text-secondary)' }}>{p.rolePrimary}</td>
@@ -63,9 +63,9 @@ export default function Players({ gameState }) {
                 <td className="text-right">{p.age}</td>
                 <td className="text-right"><OvrBadge value={p.overall} /></td>
                 <td className="text-right"><OvrBadge value={p.potential} /></td>
-                <td className="text-right">{p.aim}</td>
-                <td className="text-right">{p.awp}</td>
                 <td className="text-right">{formatMoney(p.salary)}/mo</td>
+                <td className="text-right">{p.contractYears}yr</td>
+                <td className="text-right">{formatMoney(p.buyout)}</td>
               </tr>
             ))}
           </tbody>

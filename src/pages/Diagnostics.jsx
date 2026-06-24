@@ -1,7 +1,13 @@
 import { runAllValidations } from '../utils/validation';
 
 export default function Diagnostics({ gameState }) {
-  const results = runAllValidations(gameState.teams, gameState.players, gameState.maps);
+  const results = runAllValidations(
+    gameState.teams,
+    gameState.players,
+    gameState.maps,
+    gameState.teamMapRatings,
+    gameState.events
+  );
   const allPassed = results.every((r) => r.valid);
 
   return (
@@ -9,10 +15,12 @@ export default function Diagnostics({ gameState }) {
       <div className="page-header">
         <h1>Diagnostics</h1>
         <div className="subtitle">
-          Seed database validation —{' '}
+          Database validation —{' '}
           <span style={{ color: allPassed ? 'var(--green)' : 'var(--red)', fontWeight: 600 }}>
             {allPassed ? 'ALL CHECKS PASSED' : 'ISSUES FOUND'}
           </span>
+          {' — '}
+          <span style={{ color: 'var(--text-muted)' }}>source: {gameState.dataSource}</span>
         </div>
       </div>
 
@@ -26,6 +34,7 @@ export default function Diagnostics({ gameState }) {
                   {r.valid ? 'PASS' : 'FAIL'}
                 </span>
                 <span>{r.name}</span>
+                {!r.valid && <span style={{ color: 'var(--text-muted)', fontSize: 11, marginLeft: 8 }}>({r.errors.length} issues)</span>}
               </div>
               {!r.valid && r.errors.map((err, j) => (
                 <div key={j} style={{ paddingLeft: 32, fontSize: 12, color: 'var(--red)', padding: '2px 0 2px 32px' }}>
@@ -37,10 +46,16 @@ export default function Diagnostics({ gameState }) {
         </div>
       </div>
 
-      <div className="grid-3">
+      <div className="grid-2">
         <div className="panel">
           <div className="panel-header"><h2>Database Summary</h2></div>
           <div className="panel-body">
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Data Source</span>
+              <strong style={{ color: gameState.dataSource === 'generated' ? 'var(--green)' : 'var(--yellow)' }}>
+                {gameState.dataSource}
+              </strong>
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Teams</span>
               <strong>{gameState.teams.length}</strong>
@@ -54,12 +69,12 @@ export default function Diagnostics({ gameState }) {
               <strong>{gameState.maps.length}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Tournament Templates</span>
-              <strong>{gameState.tournamentTemplates.length}</strong>
+              <span style={{ color: 'var(--text-secondary)' }}>Team Map Ratings</span>
+              <strong>{gameState.teamMapRatings.length}</strong>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Scheduled Events</span>
-              <strong>{gameState.seasonTournaments.length}</strong>
+              <span style={{ color: 'var(--text-secondary)' }}>Events</span>
+              <strong>{gameState.events.length}</strong>
             </div>
           </div>
         </div>
@@ -83,23 +98,9 @@ export default function Diagnostics({ gameState }) {
               <span style={{ color: 'var(--text-secondary)' }}>Your Team</span>
               <strong>{gameState.playerTeamId}</strong>
             </div>
-          </div>
-        </div>
-
-        <div className="panel">
-          <div className="panel-header"><h2>Settings</h2></div>
-          <div className="panel-body">
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
               <span style={{ color: 'var(--text-secondary)' }}>Difficulty</span>
               <strong>{gameState.settings.difficulty}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Sim Speed</span>
-              <strong>{gameState.settings.simSpeed}</strong>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-              <span style={{ color: 'var(--text-secondary)' }}>Currency</span>
-              <strong>{gameState.settings.currency}</strong>
             </div>
           </div>
         </div>

@@ -194,6 +194,7 @@ tr:hover td {
   text-transform: uppercase;
 }
 
+.badge-splus { background: #ff4444; color: #fff; font-weight: 700; }
 .badge-s { background: var(--tier-s); color: #fff; }
 .badge-a { background: var(--tier-a); color: #1a1a1a; }
 .badge-b { background: var(--tier-b); color: #1a1a1a; }

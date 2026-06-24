@@ -1,14 +1,19 @@
 import { Link } from 'react-router-dom';
-import { OvrBadge, StatWithBar } from '../components/StatBadge';
-import { formatMoney, statColor } from '../utils/helpers';
+import { OvrBadge } from '../components/StatBadge';
+import { formatMoney, statColor, getTeamMapRatings } from '../utils/helpers';
 
 export default function Roster({ gameState }) {
   const myTeam = gameState.teams.find((t) => t.teamId === gameState.playerTeamId);
-  const players = gameState.players.filter((p) => p.teamId === gameState.playerTeamId);
+  if (!myTeam) return <div className="panel"><div className="panel-body">No team selected.</div></div>;
+
+  const players = gameState.players.filter((p) => p.teamId === gameState.playerTeamId && p.status === 'active');
   const maps = gameState.maps;
+  const ratings = getTeamMapRatings(gameState.playerTeamId, gameState.teamMapRatings);
 
   const totalSalary = players.reduce((sum, p) => sum + p.salary, 0);
-  const avgOvr = Math.round(players.reduce((sum, p) => sum + p.overall, 0) / players.length);
+  const avgOvr = players.length > 0
+    ? Math.round(players.reduce((sum, p) => sum + p.overall, 0) / players.length)
+    : 0;
 
   return (
     <div>
@@ -82,12 +87,14 @@ export default function Roster({ gameState }) {
         </table>
       </div>
 
-      {/* Map Pool */}
       <div className="panel">
-        <div className="panel-header"><h2>Map Pool Ratings</h2></div>
+        <div className="panel-header">
+          <h2>Map Pool Ratings</h2>
+          {ratings && <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>Ban: {ratings.defaultBan} | Best: {ratings.bestMap}</span>}
+        </div>
         <div className="panel-body">
-          {maps.map((m) => {
-            const rating = myTeam.mapRatings?.[m.mapId] || 0;
+          {ratings ? maps.map((m) => {
+            const rating = ratings[m.mapId] || 0;
             const color = statColor(rating);
             return (
               <div key={m.mapId} className="map-bar" style={{ marginBottom: 8 }}>
@@ -98,7 +105,7 @@ export default function Roster({ gameState }) {
                 <span style={{ width: 28, textAlign: 'right', fontSize: 12, fontWeight: 700 }}>{rating}</span>
               </div>
             );
-          })}
+          }) : <p style={{ color: 'var(--text-muted)' }}>No map ratings available.</p>}
         </div>
       </div>
     </div>
