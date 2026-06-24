@@ -481,3 +481,61 @@ Add post-event ranking movement and persistent ranking table updates using the n
 8. Click Sim This Match from the right sidebar and confirm the user result appears in the overlay.
 9. Click Sim Other Matches / Sim Round and Advance Round until Swiss completes.
 10. Generate playoffs, sim playoff rounds and confirm the bracket, results feed, placements panel and champion state update.
+
+### Task 10 — Full-Screen Career Event Mode and Dynamic VRS v1 (Complete)
+
+- Added a true career event mode that hides the normal app sidebar/navigation while an event is active and lets the tournament overlay occupy the full viewport.
+- Added fixed-position full-screen overlay styling with `inset: 0`, `100vw`/`100vh`, dark broadcast background and a high z-index so the event no longer feels like a normal dashboard page.
+- Added an Event Ready modal that appears when the career reaches an event start date in `event_ready`, showing event dates, prize pool, team count, selected team, invite status, VRS rank, cutoff, seed/reason and entry/background simulation actions.
+- Added a first-version dynamic VRS-style ranking engine with points, current rank, last rank, movement, form, records, map record, strength of schedule, recent event results and seasonal prize-money fields.
+- Dynamic rankings now initialize from imported ranking/reputation, but imported ranking is only the initial seed after career creation.
+- Added dynamic event invite snapshots at event start using the current VRS standings and top-8/top-16/top-24/top-32 style cutoffs based on event size.
+- Event fields now use the stored invite snapshot, so invites do not change after an event begins.
+- Event completion now applies approximate VRS point/form updates using event weight, placement/champion bonus, wins/losses, opponent rank and upset logic, then re-sorts ranks and calculates movement.
+- Added team form as a 0-100 value that initializes from reputation/rank and changes after match results and event wins.
+- Improved match simulation variance by mixing live randomness into the existing strength-based seeded noise and by varying chaos by series length, making Bo1s more upset-prone than longer series while keeping better teams favored.
+- Updated the Rankings page to show dynamic VRS standings with movement, VRS points, form, record, last event, prize money and reputation.
+- Updated the Dashboard to surface the selected team's current VRS rank, points, movement, form and projected/dynamic invite cutoff information for upcoming events.
+- Updated Diagnostics with checks for event-ready modal state, full-screen event mode, dynamic VRS initialization, dynamic invite snapshots, rank/form updates and simulation variance.
+
+#### Files Created
+- src/utils/vrsRankingEngine.js
+- src/components/EventReadyModal.jsx
+
+#### Files Modified
+- src/App.jsx
+- src/state/GameStateContext.jsx
+- src/utils/matchEngine.js
+- src/pages/Dashboard.jsx
+- src/pages/Rankings.jsx
+- src/pages/Diagnostics.jsx
+- src/index.css
+- progress.md
+
+#### Known Limitations
+- The VRS formula is an approximation, not the exact real Valve formula.
+- No transfers yet.
+- No contracts yet.
+- No morale yet.
+- No detailed sponsorship economy yet.
+- Event formats are still simplified for some event types, with the playable career hub still using the existing Swiss/playoff structure.
+- Event invite snapshots are dynamic from VRS rankings, but regional qualifiers, partner invites and Major-specific qualification rules are not modeled yet.
+
+#### Manual Testing Steps
+1. Run `npm run build`.
+2. Run `npm run dev`.
+3. Reset career.
+4. Select MOUZ.
+5. Confirm Dashboard shows MOUZ, 7 January 2026, current VRS rank, VRS points and form.
+6. Advance to BLAST Bounty Season 1.
+7. Confirm the Event Ready modal appears with invited/not invited status, seed or cutoff reason.
+8. Click Enter Event if invited.
+9. Confirm the event screen becomes a full-screen tournament overlay and the normal sidebar is hidden.
+10. Sim MOUZ's match and sim other matches.
+11. Progress Swiss rounds, generate playoffs, sim playoffs and finish the event.
+12. Confirm Event Summary includes VRS point delta, rank before/after, rank movement and form change.
+13. Return to Dashboard and confirm the dynamic VRS rank/form have updated.
+14. Advance to IEM Katowice and confirm the invite field is based on the updated dynamic VRS rankings rather than the original imported ranking.
+
+#### Next Recommended Task
+Add richer event-format support for non-16-team events and persist deeper player/team career histories from event stats without adding transfers, contracts or morale yet.

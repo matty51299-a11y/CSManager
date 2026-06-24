@@ -3,12 +3,13 @@ import initialData from '../data/gameState.js';
 import { createTournament, generateEventSummary, generatePlayoffs as generatePlayoffsBracket, simulatePlayoffMatch, simulateSwissMatch } from '../utils/tournamentEngine.js';
 import { getNextSwissPairings } from '../utils/swissEngine.js';
 import { CAREER_START_DATE, compareDate, dateInRange, enrichEventsWithDates, formatDate, monthNameFromDate } from '../utils/calendarDates.js';
+import { createInviteSnapshot, getInviteStatus, getRankingRows, initializeVrsRankings, updateRankingsAfterEvent } from '../utils/vrsRankingEngine.js';
 
-const STORAGE_KEY = 'csdm-career-v3';
+const STORAGE_KEY = 'csdm-career-v4';
 const eventTeamCount = (event) => Number(event?.teams || event?.teamCount || 16);
-const rankedTeams = (rankings) => [...rankings].sort((a, b) => Number(a.ranking || 999) - Number(b.ranking || 999));
+const rankedTeams = (rankings) => [...rankings].sort((a, b) => Number(a.currentRank || a.ranking || 999) - Number(b.currentRank || b.ranking || 999));
 const inviteesFor = (event, rankings) => rankedTeams(rankings).slice(0, Math.min(eventTeamCount(event), rankings.length)).map((t) => t.teamId);
-const baseRankings = () => rankedTeams(initialData.teams);
+const baseRankings = () => initializeVrsRankings(initialData.teams);
 const datedEvents = () => enrichEventsWithDates(initialData.events);
 const orderedEvents = () => datedEvents().sort((a, b) => compareDate(a.startDate, b.startDate));
 
@@ -34,12 +35,15 @@ function seedState() {
     recentResults: [],
     rankings: baseRankings(),
     teamRecords: {},
+    eventInviteSnapshots: {},
+    careerRandomnessSeed: Math.random().toString(36).slice(2),
   };
 }
 
 function loadCareer() {
   try {
-    return { ...seedState(), ...JSON.parse(localStorage.getItem(STORAGE_KEY)) };
+    const s = { ...seedState(), ...JSON.parse(localStorage.getItem(STORAGE_KEY)) };
+    return { ...s, rankings: s.rankings?.[0]?.vrsPoints ? s.rankings : baseRankings(), eventInviteSnapshots: s.eventInviteSnapshots || {} };
   } catch {
     return seedState();
   }
@@ -94,15 +98,21 @@ export function useGameStateValue() {
   const [career, setCareer] = useState(loadCareer);
   useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(career)); }, [career]);
 
-  const gameState = useMemo(() => ({
+  const gameState = useMemo(() => {
+    const rankingRows = getRankingRows(career.rankings, initialData.teams);
+    const rankById = new Map(rankingRows.map((row) => [row.teamId, row]));
+    const rankedTeamData = initialData.teams.map((team) => ({ ...team, ...(rankById.get(team.teamId) || {}), ranking: rankById.get(team.teamId)?.currentRank || team.ranking }));
+    return ({
     ...initialData,
+    teams: rankedTeamData,
     events: datedEvents(),
     ...career,
     activeTournament: career.activeTournament || null,
     currentDateLabel: formatDate(career.currentDate),
     playerTeamId: career.selectedTeamId || initialData.playerTeamId,
     phase: career.currentPhase,
-  }), [career]);
+  });
+  }, [career]);
 
   const save = (fn) => setCareer((s) => fn({ ...s }));
 
@@ -126,7 +136,9 @@ export function useGameStateValue() {
     if (!event) {
       return addInbox({ ...s, currentPhase: 'season_complete' }, 'Season complete', 'There are no more scheduled events this season.', 'calendar');
     }
-    const invited = inviteesFor(event, s.rankings).includes(s.selectedTeamId);
+    const snapshot = createInviteSnapshot(event, s.rankings, initialData.teams);
+    const inviteStatus = getInviteStatus(event, s.rankings, initialData.teams, s.selectedTeamId, snapshot);
+    const invited = inviteStatus.invited;
     const ns = {
       ...s,
       currentDate: event.startDate,
@@ -136,11 +148,12 @@ export function useGameStateValue() {
       currentEventId: event.eventId,
       nextEventId: event.eventId,
       currentPhase: dateInRange(event.startDate, event.startDate, event.endDate) ? 'event_ready' : 'dashboard',
+      eventInviteSnapshots: { ...s.eventInviteSnapshots, [event.eventId]: snapshot },
     };
     return addInbox(
       ns,
       invited ? 'Event invite received' : 'Event reached: not invited',
-      invited ? `${event.name} invited your team.` : `${event.name} is live, but your team was outside the invite cut.`,
+      invited ? `${event.name} invited your team as seed #${inviteStatus.seed}.` : `${event.name} is live, but ${inviteStatus.reason}`,
       'event',
     );
   });
@@ -148,7 +161,8 @@ export function useGameStateValue() {
   const enterEvent = () => save((s) => {
     const event = orderedEvents().find((e) => e.eventId === s.currentEventId);
     if (!event) return s;
-    const invitedIds = inviteesFor(event, s.rankings);
+    const snapshot = s.eventInviteSnapshots?.[event.eventId] || createInviteSnapshot(event, s.rankings, initialData.teams);
+    const invitedIds = snapshot.invitees.map((invite) => invite.teamId);
     if (!invitedIds.includes(s.selectedTeamId)) {
       const summary = backgroundSummary(event, s);
       return addInbox(
@@ -175,7 +189,7 @@ export function useGameStateValue() {
         activeEventId: event.eventId,
         currentEventId: event.eventId,
         currentPhase: 'event_active_swiss',
-        activeTournament: createTournament({ event, teams }),
+        activeTournament: createTournament({ event: { ...event, inviteSnapshot: snapshot }, teams: teams.map((team) => ({ ...team, ranking: getRankingRows(s.rankings, initialData.teams).find((r) => r.teamId === team.teamId)?.currentRank || team.ranking })) }),
       },
       'Event started',
       `${event.name} has started in the Event Hub.`,
@@ -236,10 +250,14 @@ export function useGameStateValue() {
     }
 
     if (t.champion && !s.completedEvents.some((e) => e.eventId === t.event.eventId)) {
-      const summary = generateEventSummary(t, s.selectedTeamId);
+      const rankingsAfter = updateRankingsAfterEvent(s.rankings, t, initialData.teams);
+      const before = getRankingRows(s.rankings, initialData.teams).find((r) => r.teamId === s.selectedTeamId);
+      const after = getRankingRows(rankingsAfter, initialData.teams).find((r) => r.teamId === s.selectedTeamId);
+      const summary = { ...generateEventSummary(t, s.selectedTeamId), rankBefore: before?.currentRank, rankAfter: after?.currentRank, rankMovement: after?.rankMovement || 0, vrsPointDelta: Math.round((after?.vrsPoints || 0) - (before?.vrsPoints || 0)), formChange: Math.round((after?.formRating || 0) - (before?.formRating || 0)), majorMovers: getRankingRows(rankingsAfter, initialData.teams).filter((r) => Math.abs(r.rankMovement || 0) >= 3).slice(0, 6) };
       ns = addInbox(
         {
           ...ns,
+          rankings: rankingsAfter,
           completedEvents: [summary, ...s.completedEvents],
           currentDate: t.event.endDate,
           currentMonth: monthNameFromDate(t.event.endDate),
