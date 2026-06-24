@@ -1003,3 +1003,28 @@ a:hover { color: #b8f6ff; }
   .hero-stat-grid { grid-template-columns: repeat(2, 1fr); }
   .sidebar { width: 190px; min-width: 190px; }
 }
+
+/* ---- Event format views (Task: Event Format System) ---- */
+.format-blurb { color: var(--text-muted); font-size: 13px; margin: 6px 0 4px; }
+.format-stage-view { display:flex; flex-direction:column; gap: 14px; }
+.stage-tracker { display:flex; flex-wrap:wrap; gap: 8px; }
+.stage-chip { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--border-soft); background: rgba(4,13,24,.55); color: var(--text-muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+.stage-chip.active { border-color: rgba(53,215,255,.6); color: var(--accent-cyan); background: rgba(53,215,255,.12); }
+.stage-chip.done { color: var(--accent-green); border-color: rgba(57,232,138,.4); }
+.bracket-seed-list h3, .major-stage-board .muted { margin-bottom: 6px; }
+.seed-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 7px; }
+.seed-row { display:flex; align-items:center; gap: 9px; padding: 8px 11px; border: 1px solid var(--border-soft); border-radius: 10px; background: rgba(4,13,24,.5); }
+.seed-row b { color: var(--text-muted); font-size: 11px; min-width: 26px; }
+.seed-row strong { margin-left:auto; color: var(--accent-cyan); }
+.seed-row.is-user, .group-row.is-user, .stage-row.is-user { border-color: rgba(57,232,138,.55); background: rgba(57,232,138,.1); }
+.group-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.group-card { border: 1px solid var(--border-soft); border-radius: 12px; padding: 12px; background: rgba(4,13,24,.5); }
+.group-card h3 { font-size: 13px; margin-bottom: 8px; color: var(--accent-cyan); }
+.group-row { display:flex; justify-content:space-between; gap: 8px; padding: 6px 8px; border-radius: 8px; }
+.group-row strong { color: var(--accent-cyan); }
+.stage-standings { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 7px; }
+.stage-row { display:flex; align-items:center; gap: 8px; padding: 7px 10px; border: 1px solid var(--border-soft); border-radius: 9px; background: rgba(4,13,24,.5); font-size: 12px; }
+.stage-row b { color: var(--text-muted); min-width: 26px; }
+.stage-row em { margin-left:auto; font-style:normal; text-transform:uppercase; font-size: 10px; color: var(--text-muted); }
+.stage-row.qualified em { color: var(--accent-green); }
+.stage-row.eliminated em { color: var(--accent-danger, #ff5d6c); }

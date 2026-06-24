@@ -3,7 +3,10 @@ import initialData from '../data/gameState.js';
 import { createTournament, generateEventSummary, generatePlayoffs as generatePlayoffsBracket, simulatePlayoffMatch, simulateSwissMatch } from '../utils/tournamentEngine.js';
 import { getNextSwissPairings } from '../utils/swissEngine.js';
 import { CAREER_START_DATE, compareDate, dateInRange, enrichEventsWithDates, formatDate, monthNameFromDate } from '../utils/calendarDates.js';
-import { createInviteSnapshot, getInviteStatus, getRankingRows, initializeVrsRankings, updateRankingsAfterEvent } from '../utils/vrsRankingEngine.js';
+import { getRankingRows, initializeVrsRankings, updateRankingsAfterEvent } from '../utils/vrsRankingEngine.js';
+import { buildInviteSnapshot, getInviteStatus, snapshotTeams } from '../utils/eventInviteEngine.js';
+import { getEventFormat, isBreakEvent } from '../utils/eventFormatEngine.js';
+import { simulateEventFormat } from '../utils/eventStageEngine.js';
 
 const STORAGE_KEY = 'csdm-career-v4';
 const eventTeamCount = (event) => Number(event?.teams || event?.teamCount || 16);
@@ -59,21 +62,58 @@ function nextUncompletedEvent(s) {
     || orderedEvents().find((e) => !done.has(e.eventId));
 }
 
-function backgroundSummary(event, s) {
-  const teams = inviteesFor(event, s.rankings).map((id) => initialData.teams.find((t) => t.teamId === id)).filter(Boolean);
-  const champion = teams[0] || rankedTeams(s.rankings)[0] || null;
-  return {
+// Simulate an event the user is NOT invited to, using its real format.
+// Returns the new state with VRS updated, news created and the date advanced.
+function runBackgroundEvent(s, event, snapshot) {
+  const data = { players: initialData.players, teamMapRatings: initialData.teamMapRatings };
+  const field = snapshotTeams(snapshot, initialData.teams).map((team) => ({
+    ...team,
+    ranking: getRankingRows(s.rankings, initialData.teams).find((r) => r.teamId === team.teamId)?.currentRank || team.ranking,
+  }));
+  const result = simulateEventFormat({ event, teams: field, data });
+  const isBreak = result.isBreak || isBreakEvent(event);
+
+  // Apply VRS movement from the simulated matches (skipped for breaks).
+  const rankingsAfter = isBreak
+    ? s.rankings
+    : updateRankingsAfterEvent(s.rankings, { event, champion: result.champion, allMatches: result.allMatches }, initialData.teams);
+  const before = getRankingRows(s.rankings, initialData.teams).find((r) => r.teamId === s.selectedTeamId);
+  const after = getRankingRows(rankingsAfter, initialData.teams).find((r) => r.teamId === s.selectedTeamId);
+
+  const summary = {
     eventId: event.eventId,
     eventName: event.name,
-    champion,
-    runnerUp: teams[1] || null,
+    formatType: result.formatType,
+    champion: result.champion,
+    runnerUp: result.runnerUp,
+    placements: (result.placements || []).slice(0, 8),
     userRecord: { wins: 0, losses: 0 },
     userResults: [],
     prizeMoneyEarned: 0,
     reputationChange: 0,
-    rankingMovement: 'placeholder',
     background: true,
+    rankBefore: before?.currentRank,
+    rankAfter: after?.currentRank,
+    rankMovement: after?.rankMovement || 0,
+    vrsPointDelta: Math.round((after?.vrsPoints || 0) - (before?.vrsPoints || 0)),
   };
+
+  let ns = {
+    ...s,
+    rankings: rankingsAfter,
+    completedEvents: [summary, ...s.completedEvents],
+    currentDate: event.endDate,
+    currentMonth: monthNameFromDate(event.endDate),
+    currentPhase: 'dashboard',
+    currentEventId: event.eventId,
+    activeEventId: null,
+    recentResults: result.champion
+      ? [`${result.champion.name} won ${event.name}`, ...s.recentResults].slice(0, 12)
+      : s.recentResults,
+  };
+  // Fold the format-specific news items into the inbox.
+  (result.news || []).forEach((item) => { ns = addInbox(ns, item.title, item.body, item.type || 'event'); });
+  return ns;
 }
 
 function teamRecordFromTournament(tournament, teamId) {
@@ -136,7 +176,7 @@ export function useGameStateValue() {
     if (!event) {
       return addInbox({ ...s, currentPhase: 'season_complete' }, 'Season complete', 'There are no more scheduled events this season.', 'calendar');
     }
-    const snapshot = createInviteSnapshot(event, s.rankings, initialData.teams);
+    const snapshot = buildInviteSnapshot(event, s.rankings, initialData.teams);
     const inviteStatus = getInviteStatus(event, s.rankings, initialData.teams, s.selectedTeamId, snapshot);
     const invited = inviteStatus.invited;
     const ns = {
@@ -161,25 +201,19 @@ export function useGameStateValue() {
   const enterEvent = () => save((s) => {
     const event = orderedEvents().find((e) => e.eventId === s.currentEventId);
     if (!event) return s;
-    const snapshot = s.eventInviteSnapshots?.[event.eventId] || createInviteSnapshot(event, s.rankings, initialData.teams);
+    const snapshot = s.eventInviteSnapshots?.[event.eventId] || buildInviteSnapshot(event, s.rankings, initialData.teams);
     const invitedIds = snapshot.invitees.map((invite) => invite.teamId);
-    if (!invitedIds.includes(s.selectedTeamId)) {
-      const summary = backgroundSummary(event, s);
-      return addInbox(
-        {
-          ...s,
-          completedEvents: [summary, ...s.completedEvents],
-          currentDate: event.endDate,
-          currentMonth: monthNameFromDate(event.endDate),
-          currentPhase: 'event_complete',
-          currentEventId: event.eventId,
-          recentResults: [`${summary.champion?.name || 'Unknown'} won ${event.name}`, ...s.recentResults].slice(0, 12),
-        },
-        'Event champion crowned',
-        `${summary.champion?.name || 'A rival team'} won ${event.name} while your team watched from home.`,
-        'event',
-      );
+    const format = getEventFormat(event);
+
+    // Break events and events the user is not invited to are simulated in the
+    // background using their real format, then the date advances cleanly.
+    if (isBreakEvent(event) || !invitedIds.includes(s.selectedTeamId)) {
+      return runBackgroundEvent(s, event, snapshot);
     }
+
+    // Invited: play the event interactively. The live hub uses the Swiss +
+    // playoffs flow as the first working version; the overlay relabels stages
+    // and tabs to match this event's real format.
     const teams = invitedIds.map((id) => initialData.teams.find((t) => t.teamId === id)).filter(Boolean).slice(0, 16);
     return addInbox(
       {
@@ -189,10 +223,13 @@ export function useGameStateValue() {
         activeEventId: event.eventId,
         currentEventId: event.eventId,
         currentPhase: 'event_active_swiss',
-        activeTournament: createTournament({ event: { ...event, inviteSnapshot: snapshot }, teams: teams.map((team) => ({ ...team, ranking: getRankingRows(s.rankings, initialData.teams).find((r) => r.teamId === team.teamId)?.currentRank || team.ranking })) }),
+        activeTournament: createTournament({
+          event: { ...event, formatType: format.formatType, inviteSnapshot: snapshot },
+          teams: teams.map((team) => ({ ...team, ranking: getRankingRows(s.rankings, initialData.teams).find((r) => r.teamId === team.teamId)?.currentRank || team.ranking })),
+        }),
       },
       'Event started',
-      `${event.name} has started in the Event Hub.`,
+      `${event.name} (${format.label}) has started in the Event Hub.`,
       'event',
     );
   });

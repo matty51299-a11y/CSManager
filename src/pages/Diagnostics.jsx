@@ -1,7 +1,59 @@
+import { useMemo } from 'react';
 import { runAllValidations } from '../utils/validation';
 import { runTournamentDiagnostics } from '../utils/tournamentEngine.js';
+import { diagnoseEventFormat, simulateEventFormat } from '../utils/eventStageEngine.js';
+import { getEventFormat } from '../utils/eventFormatEngine.js';
+import { updateRankingsAfterEvent } from '../utils/vrsRankingEngine.js';
+
+// Run each event format end to end and report whether it reaches a champion.
+function buildFormatDiagnostics(gameState) {
+  const sortedTeams = [...gameState.teams].sort((a, b) => Number(a.ranking || 999) - Number(b.ranking || 999));
+  const data = { players: gameState.players, teamMapRatings: gameState.teamMapRatings };
+  const fieldFor = (event) => sortedTeams.slice(0, getEventFormat(event).teamCount);
+  const run = (eventId, label) => {
+    const event = gameState.events.find((e) => e.eventId === eventId);
+    if (!event) return { name: `${label} (event missing)`, valid: false, errors: ['Event not found in data'] };
+    const result = diagnoseEventFormat(event, fieldFor(event), data);
+    return { name: label, valid: result.valid, errors: result.errors, champion: result.champion };
+  };
+
+  const checks = [
+    run('blast_bounty_s1', 'BLAST Bounty: 32 teams, single-elimination champion'),
+    run('iem_katowice', 'IEM Katowice: 24 teams reach a champion'),
+    run('esl_pro_league_s1', 'ESL Pro League: 32 teams reach a champion'),
+    run('pgl_masters_spring', 'PGL Masters: 16 teams reach a champion'),
+    run('blast_rivals_s1', 'BLAST Rivals: 8 teams reach a champion'),
+    run('major_1', 'Major: 32 teams reach a champion'),
+  ];
+
+  // No duplicate teams / no team plays itself across all simulated formats.
+  const allValid = checks.every((c) => c.valid);
+  checks.push({ name: 'No duplicate teams and no self-play in any format', valid: allValid, errors: allValid ? [] : ['One or more formats reported field/self-play errors'] });
+
+  // Background sim works and VRS updates from a format result.
+  const bountyEvent = gameState.events.find((e) => e.eventId === 'blast_bounty_s1');
+  let bgValid = false; let vrsValid = false;
+  if (bountyEvent) {
+    const result = simulateEventFormat({ event: bountyEvent, teams: fieldFor(bountyEvent), data });
+    bgValid = Boolean(result.champion) && result.allMatches.length > 0;
+    const updated = updateRankingsAfterEvent(gameState.rankings, { event: bountyEvent, champion: result.champion, allMatches: result.allMatches }, gameState.teams);
+    vrsValid = updated.length === gameState.rankings.length && updated.some((r) => (r.rankMovement || 0) !== 0 || (r.vrsPoints || 0) > 0);
+  }
+  checks.push({ name: 'Background sim produces a champion', valid: bgValid, errors: bgValid ? [] : ['Background simulation did not produce a champion'] });
+  checks.push({ name: 'VRS rankings update after a format result', valid: vrsValid, errors: vrsValid ? [] : ['Rankings did not update from a format result'] });
+
+  // Overlay format metadata is well-formed for every event (no crash on tabs).
+  const overlaySafe = gameState.events.every((e) => {
+    const fmt = getEventFormat(e);
+    return Boolean(fmt && fmt.stageNames.length && fmt.middleTab);
+  });
+  checks.push({ name: 'Event overlay format metadata is valid for every event', valid: overlaySafe, errors: overlaySafe ? [] : ['An event has no valid format definition'] });
+
+  return checks;
+}
 
 export default function Diagnostics({ gameState, resetCareer }) {
+  const formatChecks = useMemo(() => buildFormatDiagnostics(gameState), [gameState]);
   const results = runAllValidations(
     gameState.teams,
     gameState.players,
@@ -47,7 +99,7 @@ export default function Diagnostics({ gameState, resetCareer }) {
     { name: 'No team plays itself', valid: tournamentDiagnostic.valid, errors: [] },
     { name: 'Inbox items are generated', valid: gameState.inboxItems.length > 0 || !gameState.careerStarted, errors: [] },
   ];
-  const allResults = [...results, tournamentDiagnostic, ...careerChecks];
+  const allResults = [...results, tournamentDiagnostic, ...formatChecks, ...careerChecks];
   const allPassed = allResults.every((r) => r.valid);
 
   return (

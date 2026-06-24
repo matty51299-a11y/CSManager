@@ -647,3 +647,142 @@ Add richer event-format support for non-16-team events and persist deeper player
 
 #### Next Recommended Task
 Run a browser screenshot pass through the requested NAVI/MOUZ BLAST Bounty flow and tune fine spacing, exact table density and overlay bracket connector polish from live screenshots.
+
+### Task 13 — Event Format System (Complete)
+
+Added a proper event format engine so different Counter-Strike events actually
+play differently instead of all feeling like the same Swiss tournament.
+
+#### Event format engine added
+- `src/utils/eventFormatEngine.js` is the single source of truth for format
+  metadata. It defines 7 format types and maps every imported event onto one of
+  them, preferring an explicit `formatType` field, then the spreadsheet `format`
+  string, then a name/type fallback. Each format exposes: formatType, label,
+  teamCount, inviteCount, bestOf, finalBestOf, kind, middleTab, stageNames and a
+  description. `describeEvent()` returns the full event model (eventId,
+  eventName, eventType, formatType, teams, startDate, endDate, prizePool, tier,
+  rankingWeight, inviteMethod, currentStage, stages).
+
+#### Multiple event formats implemented
+- `src/utils/eventStageEngine.js` simulates a whole event end-to-end using its
+  real format and returns stages, champion, runner-up, placements, allMatches
+  and news. Implemented formats:
+  - `swiss16_playoffs8` — 16-team Swiss (3 wins qualify / 3 losses out) into a
+    top-8 Bo3 single-elimination playoff. (PGL Masters, StarSeries, EWC, etc.)
+  - `bounty32_single_elim` — 32-team straight single elimination with bounty
+    values; beating a higher-ranked team is flagged as a claimed bounty.
+    (BLAST Bounty)
+  - `iem24_playin_groups_playoffs` — top 8 seeds start in the main stage, lower
+    16 fight a Play-In, 8 winners join the main-stage Swiss, top 8 to playoffs.
+    (IEM Katowice)
+  - `epl32_groups_playoffs` — 8 groups of 4 round robin, top 2 advance to a
+    16-team single-elimination playoff. (ESL Pro League)
+  - `major32_three_stage_playoffs` — three Swiss stages (Stage 1: lower 16 →8,
+    Stage 2: +8 mid seeds →8, Stage 3: +top 8 seeds →8) then an 8-team
+    single-elimination playoff with a Bo5 grand final. (Majors)
+  - `rivals8_groups_playoffs` — 2 groups of 4, top 2 to a 4-team playoff.
+    (BLAST Rivals)
+  - `background_only_break` — no matches, a calendar/news item only.
+    (Transfer Window / Player Break / awards)
+
+#### Event-specific invite logic added
+- `src/utils/eventInviteEngine.js` builds invite snapshots from the live VRS
+  rankings using the format's invite count: 8-team events invite the top 8,
+  16-team top 16, 24-team top 24, 32-team and Majors the top 32. The snapshot is
+  captured at event start and stored in `eventInviteSnapshots`, so the field
+  never changes once the event begins. The Event Ready modal now shows the
+  format, number of teams, invite cutoff, the user's rank, invited/not-invited
+  status and projected seed.
+
+#### Event overlay adapts by format
+- The full-screen overlay header, tabs and stage labels now come from the
+  event's format. Tabs adapt to Overview, then Bracket / Groups / Swiss / Stages
+  (never a Swiss tab for a non-Swiss event), then Results, Stats, Placements.
+- Added reusable stage views: `SingleElimBracketView`, `SwissStageView`,
+  `GroupStageView`, `MajorStageView` plus a shared `StageTracker` that shows the
+  format's stage names. The Overview canvas is kept clean; detailed stage info
+  lives in the format tab.
+
+#### Background simulation uses real event formats
+- Events the user is not invited to (and break events) are now simulated in the
+  background with their correct format via the stage engine. This generates a
+  real champion, placements and format-specific news, applies VRS movement and
+  advances the date to the event end before returning to the dashboard.
+
+#### VRS weighting by event type added
+- `src/utils/eventPrizeEngine.js` holds the 0-100 ranking weights (Major 100,
+  IEM Championship 85, BLAST Rivals 80, ESL Pro League / EWC 70, IEM Masters 65,
+  PGL Masters 60, BLAST Bounty / StarSeries 55, Regional Challenger 35) and a
+  prize-money split. The VRS engine now derives its event multiplier from these
+  weights, so bigger events move the rankings more than smaller ones.
+
+#### Event-specific news
+- News is generated from real results per format: BLAST Bounty upsets ("claimed
+  a bounty by eliminating …"), IEM Play-In survivors, EPL/Rivals group winners
+  ("topped Group A with a 3-0 record"), Major Stage 3 advancers and finalists,
+  and the elite eight-team invitational champion line for BLAST Rivals.
+
+#### Diagnostics added
+- Diagnostics now runs every format end-to-end (BLAST Bounty 32 → champion,
+  IEM 24 → champion, EPL 32 → champion, PGL 16 → champion, Rivals 8 → champion,
+  Major 32 → champion), checks for duplicate/self-play teams, confirms the
+  background sim produces a champion, confirms VRS updates from a format result
+  and confirms every event has valid overlay format metadata.
+
+#### Files Created
+- src/utils/eventFormatEngine.js
+- src/utils/eventInviteEngine.js
+- src/utils/eventStageEngine.js
+- src/utils/eventPrizeEngine.js
+- src/components/event/StageTracker.jsx
+- src/components/event/SingleElimBracketView.jsx
+- src/components/event/SwissStageView.jsx
+- src/components/event/GroupStageView.jsx
+- src/components/event/MajorStageView.jsx
+
+#### Files Modified
+- src/utils/vrsRankingEngine.js (weight from eventPrizeEngine; accepts flat
+  allMatches lists from background sims)
+- src/state/GameStateContext.jsx (format-aware invites, real-format background
+  simulation, format label on event start)
+- src/components/EventReadyModal.jsx (format-aware invite display)
+- src/components/event/EventTabs.jsx (format-driven tabs)
+- src/components/event/EventHeader.jsx (format-driven stage labels)
+- src/components/event/EventMainPanel.jsx (renders the format stage view)
+- src/pages/EventOverlay.jsx (passes format + tabs)
+- src/pages/Diagnostics.jsx (per-format diagnostics)
+- src/App.jsx (background events return to dashboard, not the event hub)
+- src/index.css (stage tracker, seed grid, group grid, stage board styles)
+- progress.md
+
+#### Manual Test Results
+- `npm run build` passes (Vite reports only the existing large-chunk advisory).
+- `npm run lint` passes (one pre-existing fallback-spread warning).
+- `npm run dev` serves the app with HTTP 200.
+- A headless Node run of the stage engine over the real generated database
+  confirmed every format reaches a champion with no duplicate-team or self-play
+  errors and produces the expected format-specific news:
+  - BLAST Bounty: 32 teams, 31 single-elim matches, bounty + champion news.
+  - IEM Katowice: 24 teams, Play-In survivor + champion news.
+  - ESL Pro League: 32 teams, group-topped + champion news.
+  - PGL Masters: 16 teams, champion.
+  - BLAST Rivals: 8 teams, group + elite-invitational champion news.
+  - Major: 32 teams, 108 matches, Stage 3 advancer + finalist + champion news.
+  - Transfer/Player Break: 0 matches, calendar news only.
+
+#### Known Limitations
+- Formats are simplified approximations, not exact real-world replicas yet.
+- Major stages are simplified (Swiss stages run to 8 advancers without exact
+  seeding/Buchholz).
+- IEM and EPL structures are first-pass versions.
+- The interactive (user-invited) event still plays through the verified
+  16-team Swiss → playoff hub as the first working version; the overlay relabels
+  its stages/tabs and shows a format-specific view, while background simulation,
+  diagnostics, invites, news and VRS weighting use the full real format engine.
+- No transfers yet. No contracts yet. No morale yet. No scouting yet.
+- No exact real-world VRS formula (still an approximation).
+
+#### Next Recommended Task
+Make the interactive (user-invited) event play its real format end-to-end
+(true single-elimination, groups and multi-stage Major flows in the overlay)
+instead of the simplified 16-team Swiss hub, reusing the new stage engine.

@@ -74,7 +74,13 @@ export default function App() {
               <Route path="/tournament-centre" element={<TournamentCentre gameState={gameState} />} />
               <Route path="/diagnostics" element={<Diagnostics gameState={gameState} resetCareer={actions.resetCareer} />} />
             </Routes>
-            {!inEventMode && <EventReadyModal gameState={gameState} enterEvent={() => { actions.enterEvent(); window.history.pushState(null, '', '/event-hub'); window.dispatchEvent(new PopStateEvent('popstate')); }} viewCalendar={() => { window.history.pushState(null, '', '/calendar'); window.dispatchEvent(new PopStateEvent('popstate')); }} />}
+            {!inEventMode && <EventReadyModal gameState={gameState} enterEvent={() => {
+              const snap = gameState.eventInviteSnapshots?.[gameState.currentEventId];
+              const invited = snap ? snap.invitees.some((i) => i.teamId === gameState.selectedTeamId) : false;
+              actions.enterEvent();
+              const dest = invited ? '/event-hub' : '/';
+              window.history.pushState(null, '', dest); window.dispatchEvent(new PopStateEvent('popstate'));
+            }} viewCalendar={() => { window.history.pushState(null, '', '/calendar'); window.dispatchEvent(new PopStateEvent('popstate')); }} />}
           </ErrorBoundary>
         </main>
       </div>
