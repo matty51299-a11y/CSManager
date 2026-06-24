@@ -539,3 +539,48 @@ Add post-event ranking movement and persistent ranking table updates using the n
 
 #### Next Recommended Task
 Add richer event-format support for non-16-team events and persist deeper player/team career histories from event stats without adding transfers, contracts or morale yet.
+
+### Task 11 — COD-Reference Event Overlay Clarity Pass (Complete)
+
+- Redesigned the career event overlay around the attached COD Manager screenshot's visual hierarchy: clean top event bar, tabs near the top, focused left current-match rail, large central tournament state area and simplified right information sidebar.
+- Reduced Overview clutter by removing repeated action areas and moving deeper placement/map/stat detail away from the primary right sidebar emphasis.
+- Improved the top event bar with one obvious action zone, event date range, current stage, teams alive, user team tag, status, record, best possible finish, next opponent and a persistent next-action strip.
+- Improved Swiss clarity with a central qualification board, record/pool sections, qualified/eliminated sections, clear Swiss rules and a “Your Path” strip showing the user team's current record and what a win/loss means.
+- Improved playoff bracket clarity with larger horizontal bracket columns, clearer user-team highlighting, next user match emphasis and a Champion column.
+- Simplified the right sidebar to focus on My Team, Current Match, Key Matchup, Latest User Result, recent results and My Path.
+- Kept the event entry modal, full-screen event mode, user-team highlighting, sim controls, date-based calendar logic and dynamic VRS invite/ranking systems intact.
+- Verified the build with `npm run build`.
+
+#### Files Modified
+- src/components/event/EventHeader.jsx
+- src/components/event/EventSwissView.jsx
+- src/components/event/EventBracketView.jsx
+- src/components/event/EventSidebar.jsx
+- src/components/event/EventMatchRail.jsx
+- src/components/event/EventMapPoolPreview.jsx
+- src/components/event/eventOverlayUtils.js
+- src/index.css
+- progress.md
+
+#### Known Limitations
+- The layout has been rebuilt to match the COD screenshot's structure and readability, but exact visual parity depends on live career state and team/event data.
+- Playable event formats still use the existing simplified Swiss into single-elimination playoffs structure for the career hub.
+- Dynamic VRS is preserved as the existing approximation rather than an exact Valve formula.
+- Detailed map-pool and player-stat history are still event-generated summaries rather than full long-term player career histories.
+
+#### Manual Testing Steps
+1. Run `npm run build`.
+2. Run `npm run dev`.
+3. Reset career.
+4. Select MOUZ.
+5. Advance to BLAST Bounty Season 1.
+6. Confirm the event entry modal appears and still shows invite/cutoff context.
+7. Enter the event and confirm the full-screen overlay opens with no normal sidebar.
+8. Confirm Swiss Round 1 has the COD-style structure: left match rail, central Swiss board and simplified right sidebar.
+9. Click Sim Your Match and confirm the result, record and next action update clearly.
+10. Click Sim Other Matches, then Advance Round when available.
+11. Continue until playoffs or elimination and confirm the playoff bracket is readable if reached.
+12. Finish the event, return to dashboard and confirm Rankings/VRS movement still updates.
+
+#### Next Recommended Task
+Add richer event-format support for non-16-team events and persist deeper player/team career histories from event stats while keeping the cleaned full-screen event mode intact.

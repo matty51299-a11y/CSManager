@@ -1,7 +1,26 @@
 import { mapPreview } from './eventOverlayUtils';
-const labels = [['averageOverall','Overall'],['awperStrength','AWP'],['entryStrength','Entry'],['clutchStrength','Clutch'],['iglCalling','Calling'],['mapRating','Map pool']];
+
+function edgeLabel(diff, a, b) {
+  const leader = diff >= 0 ? a.shortName : b.shortName;
+  const value = Math.abs(diff);
+  if (value <= 1) return 'Even';
+  if (value <= 4) return `${leader} +${value}`;
+  return `${leader} strong +${value}`;
+}
+
 export default function EventMapPoolPreview({ teamA, teamB, gameState }) {
   const preview = mapPreview(teamA, teamB, gameState);
-  if (!preview) return <div className="overlay-panel compact"><h3>Matchup / Map Pool</h3><p className="muted">No live matchup selected.</p></div>;
-  return <div className="overlay-panel compact"><h3>Matchup / Map Pool Preview</h3><div className="vs-strength"><b>{teamA.shortName}</b><span>{preview.teamA.total}</span><i>VS</i><span>{preview.teamB.total}</span><b>{teamB.shortName}</b></div>{labels.map(([key,label])=><div className="comparison-row" key={key}><span>{label}</span><b>{preview.teamA.breakdown[key]}</b><meter min="50" max="100" value={(preview.teamA.breakdown[key]+preview.teamB.breakdown[key])/2}></meter><b>{preview.teamB.breakdown[key]}</b></div>)}<h4>Projected veto / picks</h4>{preview.projected.map((item)=><div className="map-edge" key={item.map.key}><span>{item.map.name}</span><b>{item.edge >= 0 ? teamA.shortName : teamB.shortName} edge +{Math.abs(item.edge)}</b></div>)}</div>;
+  if (!preview) return <div className="overlay-panel compact"><h3>Key Matchup</h3><p className="muted">No live matchup selected.</p></div>;
+  const diff = preview.teamA.total - preview.teamB.total;
+  const mapDiff = preview.teamA.breakdown.mapRating - preview.teamB.breakdown.mapRating;
+  const awpDiff = preview.teamA.breakdown.awperStrength - preview.teamB.breakdown.awperStrength;
+  const formDiff = (teamA.form || teamA.reputation || 70) - (teamB.form || teamB.reputation || 70);
+  const difficulty = Math.abs(diff) <= 3 ? 'Dangerous' : Math.abs(diff) <= 7 ? 'Manageable' : diff > 0 ? 'Favourable' : 'Upset needed';
+  return <div className="overlay-panel compact key-matchup"><h3>Key Matchup</h3>
+    <div className="matchup-headline">{diff >= 0 ? teamA.shortName : teamB.shortName} {Math.abs(diff) <= 3 ? 'slight edge' : 'edge'}</div>
+    <div className="key-row"><span>Map pool</span><b>{edgeLabel(mapDiff, teamA, teamB)}</b></div>
+    <div className="key-row"><span>AWP</span><b>{edgeLabel(awpDiff, teamA, teamB)}</b></div>
+    <div className="key-row"><span>Form</span><b>{edgeLabel(formDiff, teamA, teamB)}</b></div>
+    <div className="key-row"><span>Difficulty</span><b>{difficulty}</b></div>
+  </div>;
 }
