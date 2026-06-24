@@ -7,12 +7,15 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
   const navigate = useNavigate();
   const myTeam = gameState.teams.find((t) => t.teamId === gameState.selectedTeamId);
   const myPlayers = gameState.players.filter((p) => p.teamId === gameState.selectedTeamId && p.status === 'active');
-  const topTeams = [...gameState.teams].sort((a, b) => a.ranking - b.ranking).slice(0, 10);
+  const topTeams = [...gameState.teams].sort((a, b) => a.currentRank - b.currentRank).slice(0, 10);
   const nextEvents = [...gameState.events].sort((a, b) => compareDate(a.startDate, b.startDate));
   const completedIds = new Set(gameState.completedEvents.map((e) => e.eventId));
   const nextEvent = nextEvents.find((e) => !completedIds.has(e.eventId));
   const starPlayer = [...myPlayers].sort((a, b) => b.overall - a.overall)[0];
   const averageOverall = Math.round(myPlayers.reduce((sum, p) => sum + Number(p.overall || 0), 0) / Math.max(1, myPlayers.length));
+  const inviteSnapshot = nextEvent ? gameState.eventInviteSnapshots?.[nextEvent.eventId] : null;
+  const inviteRow = inviteSnapshot?.invitees?.find((invite) => invite.teamId === gameState.selectedTeamId);
+  const inviteCutoff = inviteSnapshot?.cutoffRank || nextEvent?.teams || 16;
 
   return (
     <div>
@@ -52,20 +55,20 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
             <div className="panel-body">
               <div className="stat-grid">
                 <div className="stat-item">
-                  <div className="label">Ranking</div>
-                  <div className="value">#{myTeam.ranking}</div>
+                  <div className="label">VRS Rank</div>
+                  <div className="value">#{myTeam.currentRank}</div>
                 </div>
                 <div className="stat-item">
-                  <div className="label">Avg Overall</div>
-                  <div className="value">{averageOverall}</div>
+                  <div className="label">VRS Points</div>
+                  <div className="value">{myTeam.vrsPoints}</div>
                 </div>
                 <div className="stat-item">
-                  <div className="label">Star Player</div>
-                  <div className="value">{starPlayer?.gamertag || '—'}</div>
+                  <div className="label">Form</div>
+                  <div className="value">{myTeam.formRating}</div>
                 </div>
                 <div className="stat-item">
-                  <div className="label">Budget</div>
-                  <div className="value">{formatMoney(myTeam.budget)}</div>
+                  <div className="label">Movement</div>
+                  <div className="value">{myTeam.rankMovement > 0 ? `↑${myTeam.rankMovement}` : myTeam.rankMovement < 0 ? `↓${Math.abs(myTeam.rankMovement)}` : '—'}</div>
                 </div>
               </div>
             </div>
@@ -102,17 +105,17 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
                 <th>Team</th>
                 <th>Tier</th>
                 <th>Region</th>
-                <th className="text-right">Rep</th>
+                <th className="text-right">VRS</th>
               </tr>
             </thead>
             <tbody>
               {topTeams.map((t) => (
                 <tr key={t.teamId}>
-                  <td style={{ fontWeight: 700, color: t.ranking <= 3 ? 'var(--accent)' : 'var(--text-secondary)' }}>{t.ranking}</td>
+                  <td style={{ fontWeight: 700, color: t.currentRank <= 3 ? 'var(--accent)' : 'var(--text-secondary)' }}>{t.currentRank}</td>
                   <td><Link to={`/teams/${t.teamId}`}>{t.shortName}</Link></td>
                   <td><span className={tierBadgeClass(t.tier)}>{t.tier}</span></td>
                   <td style={{ color: 'var(--text-secondary)' }}>{t.region}</td>
-                  <td className="text-right">{t.reputation}</td>
+                  <td className="text-right">{t.vrsPoints}</td>
                 </tr>
               ))}
             </tbody>
@@ -134,6 +137,8 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
               <th>Dates</th>
               <th className="text-center">Teams</th>
               <th className="text-right">Prize Pool</th>
+              <th>Invite Cutoff</th>
+              <th>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -145,6 +150,8 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
                 <td>{formatDate(e.startDate)} – {formatDate(e.endDate)}</td>
                 <td className="text-center">{e.teams}</td>
                 <td className="text-right">{formatMoney(e.prizePool)}</td>
+                <td>Top {e.teams || 16}</td>
+                <td>{gameState.eventInviteSnapshots?.[e.eventId]?.invitees?.some((invite) => invite.teamId === gameState.selectedTeamId) ? `Invited #${gameState.eventInviteSnapshots[e.eventId].invitees.find((invite) => invite.teamId === gameState.selectedTeamId).seed}` : myTeam?.currentRank <= (e.teams || 16) ? 'Projected invited' : `Need +${myTeam.currentRank - (e.teams || 16)}`}</td>
               </tr>
             ))}
           </tbody>

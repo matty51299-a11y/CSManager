@@ -16,6 +16,7 @@ import TournamentCentre from './pages/TournamentCentre';
 import StartCareer from './pages/StartCareer';
 import Inbox from './pages/Inbox';
 import EventHub from './pages/EventHub';
+import EventReadyModal from './components/EventReadyModal';
 import { useGameState } from './state';
 
 function EventHubRoute({ gameState, actions }) {
@@ -39,6 +40,7 @@ function EventHubRoute({ gameState, actions }) {
 export default function App() {
   const actions = useGameState();
   const { gameState } = actions;
+  const inEventMode = gameState.currentPhase?.startsWith('event_active') || (gameState.currentPhase === 'event_complete' && gameState.activeTournament);
 
   if (!gameState.careerStarted) {
     return (
@@ -52,9 +54,9 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="app-layout">
-        <Sidebar gameState={gameState} />
-        <main className="main-content">
+      <div className={inEventMode ? 'app-layout event-app-mode' : 'app-layout'}>
+        {!inEventMode && <Sidebar gameState={gameState} />}
+        <main className={inEventMode ? 'main-content event-main-content' : 'main-content'}>
           <ErrorBoundary onReset={actions.resetCareer}>
             <Routes>
               <Route path="/" element={<Dashboard gameState={gameState} advanceToNextEvent={actions.advanceToNextEvent} enterEvent={actions.enterEvent} resetCareer={actions.resetCareer} />} />
@@ -72,6 +74,7 @@ export default function App() {
               <Route path="/tournament-centre" element={<TournamentCentre gameState={gameState} />} />
               <Route path="/diagnostics" element={<Diagnostics gameState={gameState} resetCareer={actions.resetCareer} />} />
             </Routes>
+            {!inEventMode && <EventReadyModal gameState={gameState} enterEvent={() => { actions.enterEvent(); window.history.pushState(null, '', '/event-hub'); window.dispatchEvent(new PopStateEvent('popstate')); }} viewCalendar={() => { window.history.pushState(null, '', '/calendar'); window.dispatchEvent(new PopStateEvent('popstate')); }} />}
           </ErrorBoundary>
         </main>
       </div>

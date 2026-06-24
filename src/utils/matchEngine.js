@@ -8,11 +8,12 @@ function clamp(value, min, max) {
 function seededNoise(seed) {
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) % 9973;
-  return (hash % 1000) / 1000;
+  return clamp(((hash % 1000) / 1000) * 0.65 + Math.random() * 0.35, 0, 1);
 }
 
 function scoreline(strengthA, strengthB, seed) {
-  const diff = strengthA - strengthB + (seededNoise(seed) - 0.5) * 8;
+  const stageChaos = seed.includes('bo1') ? 14 : seed.includes('bo5') ? 6 : 10;
+  const diff = strengthA - strengthB + (seededNoise(seed) - 0.5) * stageChaos;
   const winner = diff >= 0 ? 'A' : 'B';
   const gap = Math.abs(diff);
   const overtimeChance = seededNoise(`${seed}-ot`);
@@ -68,7 +69,7 @@ export function simulateMatch({ teamA, teamB, players = [], teamMapRatings = [],
     if (winsA === mapsToWin || winsB === mapsToWin) break;
     const strengthA = calculateTeamStrength(teamA, players, teamMapRatings, map.key);
     const strengthB = calculateTeamStrength(teamB, players, teamMapRatings, map.key);
-    const score = scoreline(strengthA.total, strengthB.total, `${teamA.teamId}-${teamB.teamId}-${map.key}-${maps.length}`);
+    const score = scoreline(strengthA.total, strengthB.total, `${teamA.teamId}-${teamB.teamId}-${map.key}-${maps.length}-bo${safeBestOf}-${Date.now()}`);
     const winner = score.winner === 'A' ? teamA : teamB;
     if (score.winner === 'A') winsA += 1; else winsB += 1;
     const teamAStats = makePlayerStats(strengthA.players, score.winner === 'A', strengthA.total, strengthB.total, `${map.key}-a`);
