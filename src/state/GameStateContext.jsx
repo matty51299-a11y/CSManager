@@ -2,31 +2,31 @@ import { createContext, createElement, useContext, useEffect, useMemo, useState 
 import initialData from '../data/gameState.js';
 import { createTournament, generateEventSummary, generatePlayoffs as generatePlayoffsBracket, simulatePlayoffMatch, simulateSwissMatch } from '../utils/tournamentEngine.js';
 import { getNextSwissPairings } from '../utils/swissEngine.js';
+import { CAREER_START_DATE, compareDate, dateInRange, enrichEventsWithDates, formatDate, monthNameFromDate } from '../utils/calendarDates.js';
 
 const STORAGE_KEY = 'csdm-career-v3';
-const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const monthToIndex = (month) => Math.max(0, MONTHS.indexOf(month));
-const monthToWeek = (month) => monthToIndex(month) * 4 + 1;
 const eventTeamCount = (event) => Number(event?.teams || event?.teamCount || 16);
 const rankedTeams = (rankings) => [...rankings].sort((a, b) => Number(a.ranking || 999) - Number(b.ranking || 999));
 const inviteesFor = (event, rankings) => rankedTeams(rankings).slice(0, Math.min(eventTeamCount(event), rankings.length)).map((t) => t.teamId);
 const baseRankings = () => rankedTeams(initialData.teams);
-const orderedEvents = () => [...initialData.events].sort((a, b) => monthToIndex(a.month) - monthToIndex(b.month));
+const datedEvents = () => enrichEventsWithDates(initialData.events);
+const orderedEvents = () => datedEvents().sort((a, b) => compareDate(a.startDate, b.startDate));
 
-function news(type, title, body, week) {
-  return { id: `${Date.now()}-${Math.random()}`, type, title, body, week, createdAt: new Date().toISOString() };
+function news(type, title, body, date) {
+  return { id: `${Date.now()}-${Math.random()}`, type, title, date, createdAt: new Date().toISOString() };
 }
 
 function seedState() {
   return {
     careerStarted: false,
     selectedTeamId: null,
-    season: 1,
-    week: 1,
-    monthIndex: 0,
+    seasonYear: 2026,
+    season: 2026,
+    currentDate: CAREER_START_DATE,
     currentMonth: 'January',
     currentPhase: 'no_career',
     currentEventId: null,
+    nextEventId: null,
     activeEventId: null,
     activeTournament: null,
     completedEvents: [],
@@ -46,12 +46,12 @@ function loadCareer() {
 }
 
 function addInbox(s, title, body, type = 'news') {
-  return { ...s, inboxItems: [news(type, title, body, s.week), ...s.inboxItems].slice(0, 80) };
+  return { ...s, inboxItems: [news(type, title, body, s.currentDate), ...s.inboxItems].slice(0, 80) };
 }
 
 function nextUncompletedEvent(s) {
   const done = new Set(s.completedEvents.map((e) => e.eventId));
-  return orderedEvents().find((e) => !done.has(e.eventId) && monthToIndex(e.month) >= s.monthIndex)
+  return orderedEvents().find((e) => !done.has(e.eventId) && compareDate(e.endDate, s.currentDate) >= 0)
     || orderedEvents().find((e) => !done.has(e.eventId));
 }
 
@@ -96,9 +96,10 @@ export function useGameStateValue() {
 
   const gameState = useMemo(() => ({
     ...initialData,
+    events: datedEvents(),
     ...career,
     activeTournament: career.activeTournament || null,
-    currentDateLabel: career.currentMonth,
+    currentDateLabel: formatDate(career.currentDate),
     playerTeamId: career.selectedTeamId || initialData.playerTeamId,
     phase: career.currentPhase,
   }), [career]);
@@ -128,11 +129,13 @@ export function useGameStateValue() {
     const invited = inviteesFor(event, s.rankings).includes(s.selectedTeamId);
     const ns = {
       ...s,
-      week: monthToWeek(event.month),
-      monthIndex: monthToIndex(event.month),
-      currentMonth: event.month,
+      currentDate: event.startDate,
+      seasonYear: Number(event.startDate.slice(0,4)),
+      season: Number(event.startDate.slice(0,4)),
+      currentMonth: monthNameFromDate(event.startDate),
       currentEventId: event.eventId,
-      currentPhase: 'event_ready',
+      nextEventId: event.eventId,
+      currentPhase: dateInRange(event.startDate, event.startDate, event.endDate) ? 'event_ready' : 'dashboard',
     };
     return addInbox(
       ns,
@@ -143,7 +146,7 @@ export function useGameStateValue() {
   });
 
   const enterEvent = () => save((s) => {
-    const event = initialData.events.find((e) => e.eventId === s.currentEventId);
+    const event = orderedEvents().find((e) => e.eventId === s.currentEventId);
     if (!event) return s;
     const invitedIds = inviteesFor(event, s.rankings);
     if (!invitedIds.includes(s.selectedTeamId)) {
@@ -152,6 +155,8 @@ export function useGameStateValue() {
         {
           ...s,
           completedEvents: [summary, ...s.completedEvents],
+          currentDate: event.endDate,
+          currentMonth: monthNameFromDate(event.endDate),
           currentPhase: 'event_complete',
           currentEventId: event.eventId,
           recentResults: [`${summary.champion?.name || 'Unknown'} won ${event.name}`, ...s.recentResults].slice(0, 12),
@@ -165,6 +170,8 @@ export function useGameStateValue() {
     return addInbox(
       {
         ...s,
+        currentDate: event.startDate,
+        currentMonth: monthNameFromDate(event.startDate),
         activeEventId: event.eventId,
         currentEventId: event.eventId,
         currentPhase: 'event_active_swiss',
@@ -234,6 +241,8 @@ export function useGameStateValue() {
         {
           ...ns,
           completedEvents: [summary, ...s.completedEvents],
+          currentDate: t.event.endDate,
+          currentMonth: monthNameFromDate(t.event.endDate),
           activeEventId: null,
           currentPhase: 'event_complete',
           recentResults: [
@@ -265,7 +274,7 @@ export function useGameStateValue() {
     }
     const summary = generateEventSummary(t, s.selectedTeamId);
     return addInbox(
-      { ...s, completedEvents: [summary, ...s.completedEvents], activeEventId: null, currentPhase: 'event_complete' },
+      { ...s, completedEvents: [summary, ...s.completedEvents], currentDate: t.event.endDate, currentMonth: monthNameFromDate(t.event.endDate), activeEventId: null, currentPhase: 'event_complete' },
       'Event completed',
       `${t.champion.name} won ${t.event.name}.`,
       'event',

@@ -8,7 +8,7 @@ export default function Sidebar({ gameState }) {
       <div className="sidebar-header">
         <h1>CS Dynasty</h1>
         <div className="sub">
-          {myTeam ? myTeam.shortName : 'No Team'} — Season {gameState.season}, Week {gameState.week}
+          {myTeam ? myTeam.shortName : 'No Team'} — {gameState.currentDateLabel || gameState.currentMonth}
         </div>
       </div>
       <nav className="sidebar-nav">

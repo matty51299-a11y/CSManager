@@ -377,3 +377,61 @@ Add richer post-event ranking movement and persistent ranking table updates whil
 
 #### Next Recommended Task
 Add richer post-event ranking movement and persistent ranking table updates while keeping the current career loop intact (still the top recommended next step from Task 6, now unblocked since the loop itself is verified stable end-to-end).
+
+### Task 8 — Date Calendar, Tournament Overlay and Match Stats Upgrade (Complete)
+
+- Replaced the career's visible week-first progression with a date-based season calendar.
+- Career state now starts on `2026-01-07` and exposes `currentDate`, `seasonYear`, `currentMonth`, `currentPhase`, `currentEventId`, `activeTournament`, `completedEvents` and `nextEventId` as part of the central state shape.
+- Added fallback/static game-calendar start and end dates for the 2026 event season, including BLAST Bounty Season 1 on `2026-01-13` to `2026-01-25` and IEM Katowice on `2026-01-28` to `2026-02-08`.
+- Continue/advance career actions now move to real event `startDate` values, set `event_ready`, enter playable events at the event start date and move completed events to their `endDate`.
+- Dashboard and sidebar now emphasize the selected team and readable calendar date instead of Season 1 / Week 1.
+- Calendar was upgraded into a month-grouped season calendar with event dates, type, tier, teams, prize pool, status, invited/not invited state, champion and user finish when available.
+- Event Hub was rebuilt into a darker overlay-style tournament hub with a large event header, event logo placeholder, stage tabs, user's match focus, current round cards, standings/bracket panels, event leaders, team stats, recent results feed, qualified/eliminated teams and timeline panels.
+- Match simulation now generates deeper map and player stat data: assists, ADR, opening kills, clutches, headshot percentage, half-score, overtime flag, map winner/loser and richer series summaries.
+- Series summaries now include series player totals, top performer, loser, upset flag and generated summary text.
+- Added event cumulative player/team stat aggregation for maps played, kills, deaths, assists, average rating, ADR, clutches and opening kills, surfaced in Event Hub leader and stats panels.
+- Diagnostics now includes date/calendar checks for the 2026-01-07 career start, dated first/second event progression, event-ready phase, Event Hub entry, match stat generation, cumulative stat updates, event end-date completion and calendar status data.
+
+#### Files Created
+- src/utils/calendarDates.js
+
+#### Files Modified
+- src/state/GameStateContext.jsx
+- src/utils/matchEngine.js
+- src/utils/tournamentStandings.js
+- src/utils/tournamentEngine.js
+- src/pages/Dashboard.jsx
+- src/pages/Calendar.jsx
+- src/pages/EventHub.jsx
+- src/pages/Diagnostics.jsx
+- src/pages/Inbox.jsx
+- src/components/Sidebar.jsx
+- src/index.css
+- progress.md
+
+#### Known Limitations
+- Event dates are currently fallback/static game calendar dates if not imported from the spreadsheet.
+- Rankings are still simplified.
+- Non-16-team event handling may still be simplified through the existing 16-team Swiss/playoff career hub.
+- No transfers yet.
+- No contracts yet.
+- No morale yet.
+- No full VRS yet.
+- Tournament Sandbox remains separate as a development/testing tool.
+
+#### Manual Testing Steps
+1. Run `npm install` if dependencies are missing.
+2. Run `npm run dev`.
+3. Reset career from Diagnostics or Dashboard.
+4. Start a new career and select MOUZ.
+5. Confirm Dashboard and sidebar show MOUZ with `7 January 2026` instead of Season 1 / Week 1 as the main time context.
+6. Click Advance to Next Event and confirm the date moves to `13 January 2026` with BLAST Bounty Season 1 in `event_ready`.
+7. Click Enter Event and confirm the Event Hub overlay opens with BLAST Bounty Season 1 dates, stage tabs and MOUZ highlighted.
+8. Click Sim Your Match and confirm the match summary, map scores and player stat table appear.
+9. Continue simming AI matches/rounds, generate playoffs and finish the event.
+10. Confirm completing the event moves the career date to `25 January 2026`.
+11. Continue again and confirm the next event advances to IEM Katowice on `28 January 2026`.
+12. Open Calendar and confirm events are grouped by month with statuses, invite state and dates.
+
+#### Next Recommended Task
+Add post-event ranking movement and persistent ranking table updates using the new dated calendar/event summary foundation.
