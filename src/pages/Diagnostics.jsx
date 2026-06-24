@@ -1,4 +1,5 @@
 import { runAllValidations } from '../utils/validation';
+import { runTournamentDiagnostics } from '../utils/tournamentEngine.js';
 
 export default function Diagnostics({ gameState }) {
   const results = runAllValidations(
@@ -8,7 +9,9 @@ export default function Diagnostics({ gameState }) {
     gameState.teamMapRatings,
     gameState.events
   );
-  const allPassed = results.every((r) => r.valid);
+  const tournamentDiagnostic = runTournamentDiagnostics(gameState);
+  const allResults = [...results, tournamentDiagnostic];
+  const allPassed = allResults.every((r) => r.valid);
 
   return (
     <div>
@@ -27,7 +30,7 @@ export default function Diagnostics({ gameState }) {
       <div className="panel">
         <div className="panel-header"><h2>Validation Results</h2></div>
         <div className="panel-body">
-          {results.map((r, i) => (
+          {allResults.map((r, i) => (
             <div key={i}>
               <div className="diag-row">
                 <span className={`diag-icon ${r.valid ? 'diag-pass' : 'diag-fail'}`}>

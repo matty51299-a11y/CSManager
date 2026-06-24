@@ -440,3 +440,84 @@ button:hover {
   margin-top: 8px;
   font-size: 12px;
 }
+
+/* Tournament Centre */
+.tournament-controls {
+  display: grid;
+  grid-template-columns: 1fr 160px 190px;
+  gap: 10px;
+  align-items: end;
+}
+.tournament-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.team-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  gap: 6px 10px;
+  max-height: 175px;
+  overflow: auto;
+}
+.team-picker label, .list-row {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 5px 7px;
+}
+.match-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(245px, 1fr));
+  gap: 10px;
+}
+.match-card {
+  background: linear-gradient(180deg, #1b202a, #151922);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 8px 10px;
+}
+.match-line {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 8px;
+  align-items: center;
+}
+.match-line span { color: var(--accent); font-weight: 800; }
+.muted { color: var(--text-muted); font-size: 11px; }
+.upset-tag {
+  color: #111;
+  background: var(--yellow);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-weight: 800;
+  margin-left: 6px;
+}
+.status-qualified { color: var(--green); font-weight: 800; }
+.status-eliminated { color: var(--red); font-weight: 800; }
+.status-active { color: var(--accent); font-weight: 800; }
+.bracket-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 12px;
+}
+.bracket-grid h3 {
+  color: var(--text-secondary);
+  font-size: 12px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+.champion-card {
+  border: 1px solid rgba(240, 192, 64, 0.55);
+  background: linear-gradient(135deg, rgba(240, 192, 64, 0.18), rgba(74, 158, 255, 0.08));
+  border-radius: 8px;
+  font-size: 22px;
+  font-weight: 900;
+  margin-bottom: 16px;
+  padding: 16px;
+}
+button:disabled { opacity: 0.45; cursor: not-allowed; }

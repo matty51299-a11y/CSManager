@@ -122,19 +122,74 @@ Any coding agent must read this file before making changes.
 - No search/filter on Teams or Players pages yet
 - Events use month names instead of exact dates — no week-based scheduling yet
 
+### Task 4 — Tournament Centre and Swiss Playoff Simulator (Complete)
+
+- Added the first playable tournament simulation system using the existing generated teams, players, maps, events and Bo3 match engine.
+- Added standalone tournament utilities outside React components:
+  - tournament creation and diagnostics orchestration
+  - Swiss pairing and advancement logic
+  - playoff bracket creation and round simulation
+  - tournament standings and match summary helpers
+- Added 16-team PGL Masters style format:
+  - Round 1 high seed vs low seed pairings
+  - Swiss record-based pairings after Round 1
+  - rematch avoidance where possible
+  - teams qualify at 3 wins and are eliminated at 3 losses
+  - Swiss continues until 8 teams qualify
+  - playoff seeding uses Swiss result first, then original seed/ranking
+  - quarter-finals, semi-finals and grand final are Bo3 single elimination
+  - champion and runner-up are recorded when playoffs finish
+- Added Tournament Centre page with:
+  - event selection from imported events
+  - top-16 auto-fill and manual 16-team picker
+  - generate tournament action
+  - upcoming Swiss pairings
+  - simulate next Swiss round action
+  - Swiss standings with records, maps, rounds, status and opponents played count
+  - qualified and eliminated team lists
+  - generate playoffs action
+  - simulate playoff round action
+  - compact playoff bracket
+  - champion card
+  - session-only tournament history with champion, runner-up, semi-finalists, qualified teams and biggest upset
+- Tournament match cards now show series score, maps played, map scores, top performer and upset tags for major ranking upsets.
+- Added Tournament Centre to sidebar navigation.
+- Added a tournament diagnostics check that generates a 16-team tournament, simulates Swiss qualification, simulates playoffs, checks for duplicate teams and confirms exactly one champion.
+
+#### Files Created
+- src/utils/tournamentEngine.js
+- src/utils/swissEngine.js
+- src/utils/bracketEngine.js
+- src/utils/tournamentStandings.js
+- src/pages/TournamentCentre.jsx
+
+#### Files Modified
+- src/App.jsx
+- src/components/Sidebar.jsx
+- src/pages/Diagnostics.jsx
+- src/index.css
+- progress.md
+
+#### Known Limitations
+- Tournament history is session-only React state and is not saved to disk or localStorage yet.
+- Swiss Buchholz/tiebreakers are simplified; standings use record, map differential, round differential and original seed.
+- Pairing logic avoids rematches where possible but uses fallback pairings rather than complex floaters.
+- MVP candidate is based on displayed match top performers rather than a full event-wide stat database.
+- No ranking impact, prize money, full calendar progression, morale, transfers, contracts or VRS updates are applied yet.
+
 ## In Progress
 
 Nothing.
 
 ## Planned Next
 
-1. Add tournament bracket/group stage formats powered by the match engine
-2. Add VRS-style ranking calculation after simulated matches
-3. Transfers and free agency
-4. Contract management
-5. Advance week / season progression
-6. Search/filter on Teams and Players pages
-7. Delete orphaned old data files (src/data/teams.js, players.js, maps.js, tournaments.js)
+1. Add persistent tournament save/load or localStorage tournament history
+2. Add event-wide player stat aggregation and MVP awards
+3. Add VRS-style ranking calculation after simulated tournaments
+4. Add calendar hooks for running scheduled events
+5. Transfers and free agency
+6. Contract management
+7. Search/filter on Teams and Players pages
 
 ## Rules for Future Coding Tasks
 
