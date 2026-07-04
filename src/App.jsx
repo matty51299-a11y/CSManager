@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import Sidebar from './components/Sidebar';
+import TopBar from './components/TopBar';
 import ErrorBoundary from './components/ErrorBoundary';
 import Dashboard from './pages/Dashboard';
 import Teams from './pages/Teams';
@@ -51,7 +52,9 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className={inEventMode ? 'app-layout event-app-mode' : 'app-layout'}>
+      <div className={inEventMode ? 'fm-shell event-app-mode' : 'fm-shell'}>
+        {!inEventMode && <TopBar gameState={gameState} actions={actions} />}
+        <div className={inEventMode ? 'app-layout event-app-mode' : 'app-layout'}>
         {!inEventMode && <Sidebar gameState={gameState} />}
         <main className={inEventMode ? 'main-content event-main-content' : 'main-content'}>
           <ErrorBoundary onReset={actions.resetCareer}>
@@ -80,6 +83,7 @@ export default function App() {
             }} viewCalendar={() => { window.history.pushState(null, '', '/calendar'); window.dispatchEvent(new PopStateEvent('popstate')); }} />}
           </ErrorBoundary>
         </main>
+        </div>
       </div>
     </BrowserRouter>
   );
