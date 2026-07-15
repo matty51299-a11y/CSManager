@@ -1,5 +1,14 @@
 import { Component } from 'react';
 
+function isDevelopment() {
+  return import.meta.env?.DEV ?? process.env.NODE_ENV !== 'production';
+}
+
+function currentRoute() {
+  if (typeof window === 'undefined') return 'unknown';
+  return `${window.location.pathname}${window.location.search}${window.location.hash}`;
+}
+
 export default class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
@@ -11,7 +20,18 @@ export default class ErrorBoundary extends Component {
   }
 
   componentDidCatch(error, info) {
-    console.error('CSManager runtime error:', error, info);
+    if (isDevelopment()) {
+      console.error('CSManager runtime error', {
+        message: error?.message,
+        stack: error?.stack,
+        componentStack: info?.componentStack,
+        route: currentRoute(),
+        currentCareerDate: this.props.currentCareerDate || 'unknown',
+      });
+      return;
+    }
+
+    console.error('CSManager runtime error:', error?.message || error);
   }
 
   handleReset = () => {

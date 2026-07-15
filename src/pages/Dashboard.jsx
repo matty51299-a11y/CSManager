@@ -170,11 +170,11 @@ export default function Dashboard({ gameState, resetCareer }) {
           <section className="panel">
             <div className="panel-header"><h2>Fixtures</h2><Link to="/calendar">Schedule</Link></div>
             <div className="panel-body">
-              {(gameState.fixtures || []).filter((f) => !f.simulated && [f.teamAId, f.teamBId].includes(gameState.selectedTeamId)).slice(0, 5).map((f) => { const e = gameState.events.find((ev) => ev.eventId === f.tournamentId); const opp = gameState.teams.find((t) => t.teamId === (f.teamAId === gameState.selectedTeamId ? f.teamBId : f.teamAId)); return (
-                <div key={f.id} className="risk-row">
+              {(gameState.fixtures || []).filter((fixture) => fixture && !fixture.simulated && [fixture.teamAId, fixture.teamBId].includes(gameState.selectedTeamId)).slice(0, 5).map((fixture) => { const e = gameState.events.find((event) => event.eventId === fixture.tournamentId); const opp = gameState.teams.find((team) => team.teamId === (fixture.teamAId === gameState.selectedTeamId ? fixture.teamBId : fixture.teamAId)); return (
+                <div key={fixture.id} className="risk-row">
                   <div className="risk-who">
                     <b><Link to={`/tournaments/${e?.eventId}`}>vs {opp?.shortName || 'TBD'}</Link></b>
-                    <span>{formatDate(f.scheduledDate)} · {e?.name} · {f.round}</span>
+                    <span>{formatDate(fixture.scheduledDate)} · {e?.name} · {fixture.round}</span>
                   </div>
                   <span className={tierBadgeClass(e?.tier)}>{e?.tier}</span>
                 </div>
@@ -231,7 +231,7 @@ export default function Dashboard({ gameState, resetCareer }) {
                 const isCurrent = gameState.currentEventId === e.eventId;
                 const inv = gameState.eventInviteSnapshots?.[e.eventId]?.invitees?.some((x) => x.teamId === gameState.selectedTeamId) || (myTeam?.currentRank <= (e.teams || 16));
                 return (
-                  <div key={f.id} className={`event-intel-card ${isCurrent ? 'current' : ''}`}>
+                  <div key={e.eventId} className={`event-intel-card ${isCurrent ? 'current' : ''}`}>
                     <div className="event-card-head"><Link to={`/tournaments/${e.eventId}`}>{e.name}</Link><span className={tierBadgeClass(e.tier)}>{e.tier}</span></div>
                     <div className="muted">{formatDate(e.startDate)} – {formatDate(e.endDate)}</div>
                     <div className="event-card-meta">

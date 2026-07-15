@@ -47,7 +47,7 @@ export default function App() {
   if (!gameState.careerStarted) {
     return (
       <div className="main-content">
-        <ErrorBoundary onReset={actions.resetCareer}>
+        <ErrorBoundary onReset={actions.resetCareer} currentCareerDate={gameState.currentDate}>
           <StartCareer gameState={gameState} onGoToTeamSelection={actions.goToTeamSelection} onBegin={actions.startCareer} />
         </ErrorBoundary>
       </div>
@@ -61,7 +61,7 @@ export default function App() {
         {!inEventMode && <TopNav gameState={gameState} actions={actions} onPlayMatch={(fixtureId) => setPreMatchFixtureId(fixtureId)} />}
         <div className={inEventMode ? 'app-layout event-app-mode' : 'app-layout'}>
         <main className={inEventMode ? 'main-content event-main-content' : 'main-content'}>
-          <ErrorBoundary onReset={actions.resetCareer}>
+          <ErrorBoundary onReset={actions.resetCareer} currentCareerDate={gameState.currentDate}>
             <Routes>
               <Route path="/" element={<Dashboard gameState={gameState} advanceToNextEvent={actions.advanceToNextEvent} enterEvent={actions.enterEvent} resetCareer={actions.resetCareer} />} />
               <Route path="/teams" element={<Teams gameState={gameState} />} />
