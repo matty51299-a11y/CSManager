@@ -22,6 +22,7 @@ import EventReadyModal from './components/EventReadyModal';
 import { useGameState } from './state';
 import { PreMatchModal, ResultModal } from './components/MatchModals';
 import { useState } from 'react';
+import { isUserFixture } from './utils/careerSimulation';
 
 function EventHubRoute({ gameState, actions }) {
   const navigate = useNavigate();
@@ -87,7 +88,7 @@ export default function App() {
               window.history.pushState(null, '', dest); window.dispatchEvent(new PopStateEvent('popstate'));
             }} viewCalendar={() => { window.history.pushState(null, '', '/calendar'); window.dispatchEvent(new PopStateEvent('popstate')); }} />}
           </ErrorBoundary>
-            <PreMatchModal gameState={gameState} fixture={(gameState.fixtures || []).find((f) => f.id === preMatchFixtureId)} onClose={() => setPreMatchFixtureId(null)} onPlay={(fixtureId) => { actions.playFixture(fixtureId); setPreMatchFixtureId(null); }} />
+            <PreMatchModal gameState={gameState} fixture={(gameState.fixtures || []).find((f) => f.id === preMatchFixtureId && isUserFixture(f, gameState.selectedTeamId))} onClose={() => setPreMatchFixtureId(null)} onPlay={(fixtureId) => { actions.playFixture(fixtureId); setPreMatchFixtureId(null); }} />
             <ResultModal gameState={gameState} result={gameState.pendingMatchResult} onClose={actions.acknowledgeMatchResult} onTournament={() => { const tid = gameState.pendingMatchResult?.tournamentId; actions.acknowledgeMatchResult(); window.history.pushState(null, '', `/tournaments/${tid}`); window.dispatchEvent(new PopStateEvent('popstate')); }} />
         </main>
         </div>

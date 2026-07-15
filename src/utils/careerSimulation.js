@@ -54,8 +54,8 @@ function createTournamentState(event, field) {
 }
 
 function makeFixture(event, tournament, stage, teamAId, teamBId, scheduledDate, bestOf, selectedTeamId, slot, groupId=null) {
-  const isUser = [teamAId, teamBId].includes(selectedTeamId);
-  return { id: makeId('fixture', event.eventId, stage, groupId, slot, teamAId, teamBId), tournamentId:event.eventId, stageId:stage, scheduledDate, scheduledTime:'18:00', bestOf, teamAId, teamBId, status:'scheduled', result:null, mapScores:[], playerStatistics:[], userTeamInvolved:isUser, simulated:false, round:`${stageLabel(stage)} - Match ${slot}`, groupId, bracketPosition:slot, nextFixtureId:null };
+  const isUser = isUserFixture({ teamAId, teamBId }, selectedTeamId);
+  return { id: makeId('fixture', event.eventId, stage, groupId, slot, teamAId, teamBId), tournamentId:event.eventId, stageId:stage, scheduledDate, scheduledTime:'18:00', sequence:slot, dependencyFixtureIds:[], bestOf, teamAId, teamBId, status:'scheduled', result:null, mapScores:[], playerStatistics:[], userTeamInvolved:isUser, simulated:false, round:`${stageLabel(stage)} - Match ${slot}`, groupId, bracketPosition:slot, nextFixtureId:null };
 }
 function eventForFixture(fixture, event, teamA, teamB) { return createCalendarEvent({ id: makeId('event', fixture.id), date: fixture.scheduledDate, type:'match', priority: fixture.userTeamInvolved ? 100 : 20, title:`${teamA.shortName || teamA.name} vs ${teamB.shortName || teamB.name}`, description:`${event.name} · ${fixture.round} · Best of ${fixture.bestOf}`, relatedTeamIds:[teamA.teamId, teamB.teamId], relatedTournamentId:event.eventId, relatedMatchId:fixture.id, requiresUserAction:fixture.userTeamInvolved, blocksProgression:fixture.userTeamInvolved }); }
 
@@ -84,8 +84,49 @@ export function generateInitialFixtures({ events, rankings, teams, selectedTeamI
   return { fixtures, calendarEvents, tournaments };
 }
 
-export function getTodayUserFixture(state) { return (state.fixtures || []).find((fixture) => fixture?.userTeamInvolved && !fixture.simulated && fixture.status !== 'completed' && fixture.scheduledDate && isSameDay(fixture.scheduledDate, state.currentDate)); }
-export function getNextFixture(state, teamId = state.selectedTeamId) { return (state.fixtures || []).filter((fixture) => fixture && !fixture.simulated && fixture.status !== 'completed' && fixture.scheduledDate && [fixture.teamAId, fixture.teamBId].includes(teamId) && compareDate(fixture.scheduledDate, state.currentDate) >= 0).sort((fixtureA, fixtureB) => compareDate(fixtureA.scheduledDate, fixtureB.scheduledDate))[0] || null; }
+export function isUserFixture(fixture, controlledTeamId) {
+  return !!fixture && !!controlledTeamId && (fixture.teamAId === controlledTeamId || fixture.teamBId === controlledTeamId);
+}
+function fixtureParticipantsKnown(fixture) { return !!fixture?.teamAId && !!fixture?.teamBId; }
+function fixtureDependenciesComplete(fixture, fixtures = []) {
+  const dependencyIds = fixture?.dependencyFixtureIds || [];
+  return dependencyIds.every((id) => fixtures.find((f) => f.id === id)?.status === 'completed');
+}
+function isPlayableUserFixture(fixture, state) {
+  return isUserFixture(fixture, state.selectedTeamId)
+    && fixtureParticipantsKnown(fixture)
+    && fixtureDependenciesComplete(fixture, state.fixtures || [])
+    && !fixture.simulated
+    && fixture.status !== 'completed'
+    && ['scheduled', 'ready'].includes(fixture.status || 'scheduled');
+}
+export function getUserFixtures(state) {
+  return (state.fixtures || []).filter((fixture) => isUserFixture(fixture, state.selectedTeamId));
+}
+export function getTodayUserFixture(state) {
+  return getUserFixtures(state)
+    .filter((fixture) => isPlayableUserFixture(fixture, state) && fixture.scheduledDate && isSameDay(fixture.scheduledDate, state.currentDate))
+    .sort((a, b) => compareDate(a.scheduledDate, b.scheduledDate) || String(a.scheduledTime || '').localeCompare(String(b.scheduledTime || '')) || (a.sequence || 0) - (b.sequence || 0))[0] || null;
+}
+export function getNextUserFixture(state) {
+  return getUserFixtures(state)
+    .filter((fixture) => isPlayableUserFixture(fixture, state) && fixture.scheduledDate && compareDate(fixture.scheduledDate, state.currentDate) >= 0)
+    .sort((a, b) => compareDate(a.scheduledDate, b.scheduledDate) || String(a.scheduledTime || '').localeCompare(String(b.scheduledTime || '')) || (a.sequence || 0) - (b.sequence || 0))[0] || null;
+}
+export function getUserUpcomingFixtures(state) { return getUserFixtures(state).filter((f) => f.status !== 'completed' && !f.simulated); }
+export function getUserCompletedFixtures(state) { return getUserFixtures(state).filter((f) => f.status === 'completed' || f.simulated); }
+export function getPendingUserMatchResult(state) {
+  const result = (state.matchResults || []).find((m) => m.id === state.pendingMatchResultId);
+  if (!result || result.acknowledged) return null;
+  const fixture = (state.fixtures || []).find((f) => f.id === result.fixtureId);
+  return isUserFixture(fixture, state.selectedTeamId) ? result : null;
+}
+export function getDueAiFixtures(state, date = state.currentDate) {
+  return (state.fixtures || [])
+    .filter((fixture) => fixture && !isUserFixture(fixture, state.selectedTeamId) && fixtureParticipantsKnown(fixture) && fixtureDependenciesComplete(fixture, state.fixtures || []) && !fixture.simulated && fixture.status !== 'completed' && fixture.scheduledDate && compareDate(fixture.scheduledDate,date)<=0)
+    .sort((a, b) => compareDate(a.scheduledDate, b.scheduledDate) || String(a.scheduledTime || '').localeCompare(String(b.scheduledTime || '')) || (a.sequence || 0) - (b.sequence || 0));
+}
+export function getNextFixture(state, teamId = state.selectedTeamId) { return getNextUserFixture({ ...state, selectedTeamId: teamId }); }
 export function getPrimaryCareerAction(state) {
   const fixture = getTodayUserFixture(state);
   if (fixture) return { type: 'PLAY_MATCH', label: 'PLAY MATCH', fixtureId: fixture.id, disabled: false };
@@ -104,10 +145,12 @@ export function aggregatePlayerStats(maps) {
   return [...by.values()].map((r) => { const kd = r.kills / Math.max(1,r.deaths); const kast = Math.max(52, Math.min(92, Math.round(62 + kd * 7 + r.assists / Math.max(1,r.maps)))); const rating = Math.max(0.6, Math.min(1.9, (0.42*(r.kills/Math.max(1,r.deaths))) + (0.22*(r.ADR/r.maps/80)) + (0.16*(kast/72)) + (0.1*(r.openingKills/Math.max(1,r.maps)/2)) + (0.1*(r.clutches/Math.max(1,r.maps)/1.5)))); return { ...r, ADR: Math.round(r.ADR / r.maps), KAST: kast, headshotPercentage: Math.round(r.headshotPercentage / r.maps), rating: Math.round(rating * 100) / 100, kdDiff: r.kills - r.deaths }; });
 }
 
-export function simulateFixture(state, fixtureId, initialData) {
+export function simulateFixture(state, fixtureId, initialData, options = {}) {
   const fixture = (state.fixtures || []).find((f) => f.id === fixtureId);
   if (!fixture) return { state, error: 'Fixture not found.' };
   if (fixture.simulated || fixture.status === 'completed') return { state, error: 'Match already completed.' };
+  const manualUserMatch = options.userInitiated !== false;
+  if (manualUserMatch && !isUserFixture(fixture, state.selectedTeamId)) return { state, error: 'Cannot manually play an AI-controlled fixture.' };
   const teamA = initialData.teams.find((t)=>t.teamId===fixture.teamAId); const teamB = initialData.teams.find((t)=>t.teamId===fixture.teamBId);
   if (!teamA || !teamB) return { state, error: 'Missing opponent.' };
   const result = simulateMatch({ teamA, teamB, players: initialData.players, teamMapRatings: initialData.teamMapRatings, bestOf: fixture.bestOf, seed: `${state.careerRandomnessSeed}-${fixture.id}-${fixture.scheduledDate}` });
@@ -115,14 +158,15 @@ export function simulateFixture(state, fixtureId, initialData) {
   const stats = aggregatePlayerStats(result.maps);
   const mvp = [...stats].sort((a,b)=>b.rating-a.rating)[0];
   const event = initialData.events.find((e)=>e.eventId===fixture.tournamentId);
-  const matchRecord = { id: fixture.id, fixtureId: fixture.id, tournamentId: fixture.tournamentId, tournamentName: event?.name || 'Tournament', stage: fixture.round, date: fixture.scheduledDate, bestOf: fixture.bestOf, teamA, teamB, winner: result.winner, loser: result.winner.teamId === teamA.teamId ? teamB : teamA, seriesScore: result.seriesScore, maps: result.maps, playerStatistics: stats, matchMvp: mvp, acknowledged: false };
+  const userMatch = isUserFixture(fixture, state.selectedTeamId);
+  const matchRecord = { id: fixture.id, fixtureId: fixture.id, tournamentId: fixture.tournamentId, tournamentName: event?.name || 'Tournament', stage: fixture.round, date: fixture.scheduledDate, bestOf: fixture.bestOf, teamA, teamB, winner: result.winner, loser: result.winner.teamId === teamA.teamId ? teamB : teamA, seriesScore: result.seriesScore, maps: result.maps, playerStatistics: stats, matchMvp: mvp, acknowledged: !userMatch };
   let fixtures = state.fixtures.map((f)=>f.id===fixture.id?{...f,status:'completed',simulated:true,result:matchRecord,mapScores:result.maps,playerStatistics:stats}:f);
   let calendarEvents = (state.calendarEvents||[]).map((e)=>e.relatedMatchId===fixture.id?{...e,resolved:true,blocksProgression:false,requiresUserAction:false}:e);
   let tournaments = state.tournaments || {};
   const progressed = progressTournamentAfterResult({ state: { ...state, fixtures, calendarEvents, tournaments }, fixture: { ...fixture, result: matchRecord }, matchRecord, event, initialData });
   fixtures = progressed.fixtures; calendarEvents = progressed.calendarEvents; tournaments = progressed.tournaments;
   const playerStatus = applyMatchLoad(state.playerStatus || {}, [fixture.teamAId, fixture.teamBId], initialData.players);
-  return { state: { ...state, fixtures, calendarEvents, tournaments, playerStatus, matchResults: [matchRecord, ...(state.matchResults||[])], recentResults: [`${matchRecord.winner.shortName} beat ${matchRecord.loser.shortName} ${result.seriesScore}`, ...(state.recentResults||[])].slice(0,12), pendingMatchResultId: matchRecord.id }, result: matchRecord };
+  return { state: { ...state, fixtures, calendarEvents, tournaments, playerStatus, matchResults: [matchRecord, ...(state.matchResults||[])], recentResults: [`${matchRecord.winner.shortName} beat ${matchRecord.loser.shortName} ${result.seriesScore}`, ...(state.recentResults||[])].slice(0,12), pendingMatchResultId: userMatch ? matchRecord.id : state.pendingMatchResultId }, result: matchRecord };
 }
 
 function scoreParts(seriesScore) { const [a,b] = String(seriesScore || '0-0').split('-').map((n)=>Number(n)||0); return [a,b]; }
@@ -181,8 +225,8 @@ export function processDailySimulation(state, initialData) {
   const training = processTrainingDay(playerStatus, initialData.players, currentDate);
   playerStatus = training.status;
   let next = { ...state, currentDate, currentMonth: monthNameFromDate(currentDate), lastProcessedDay: currentDate, playerStatus, trainingLog: training.report ? [training.report, ...(state.trainingLog||[])].slice(0,60) : (state.trainingLog||[]) };
-  const dueAi = (next.fixtures||[]).filter((fixture) => fixture && !fixture.userTeamInvolved && !fixture.simulated && fixture.scheduledDate && compareDate(fixture.scheduledDate,currentDate)<=0);
-  dueAi.forEach((fixture) => { next = simulateFixture(next, fixture.id, initialData).state; });
+  const dueAi = getDueAiFixtures(next, currentDate);
+  dueAi.forEach((fixture) => { next = simulateFixture(next, fixture.id, initialData, { userInitiated:false }).state; });
   if (currentDate.endsWith('-01')) next.inboxItems = [{ id:`finance-${currentDate}`, type:'financeUpdate', title:'Monthly finance update', body:'Salaries, sponsorship and operating costs have been processed.', date:currentDate, createdAt:new Date().toISOString(), blocksProgression:false }, ...(next.inboxItems||[])].slice(0,80);
   if (training.report && (currentDate.endsWith('-07') || currentDate.endsWith('-14') || currentDate.endsWith('-21') || currentDate.endsWith('-28'))) next.inboxItems = [{ id:`training-${currentDate}`, type:'training', title:'Weekly training report', body:`Training processed for ${training.report.players} players. Average score: ${training.report.averageScore}.`, date:currentDate, createdAt:new Date().toISOString(), blocksProgression:false, metadata:training.report }, ...(next.inboxItems||[])].slice(0,80);
   return next;

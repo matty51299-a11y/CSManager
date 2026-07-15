@@ -1,7 +1,7 @@
 import { createContext, createElement, useContext, useEffect, useMemo, useState } from 'react';
 import initialData from '../data/gameState.js';
 import { CAREER_START_DATE, compareDate, dateInRange, enrichEventsWithDates, formatDate, monthNameFromDate } from '../utils/calendarDates.js';
-import { generateInitialFixtures, getNextFixture, getPrimaryCareerAction, processDailySimulation, simulateFixture } from '../utils/careerSimulation.js';
+import { generateInitialFixtures, getNextUserFixture, getPendingUserMatchResult, getPrimaryCareerAction, processDailySimulation, simulateFixture, isUserFixture } from '../utils/careerSimulation.js';
 import { getRankingRows, initializeVrsRankings, updateRankingsAfterEvent } from '../utils/vrsRankingEngine.js';
 import { buildInviteSnapshot, getInviteStatus, snapshotTeams } from '../utils/eventInviteEngine.js';
 import { getEventFormat, isBreakEvent } from '../utils/eventFormatEngine.js';
@@ -17,6 +17,7 @@ import {
 } from '../utils/liveEventController.js';
 
 const STORAGE_KEY = 'csdm-career-v4';
+const SAVE_VERSION = 3;
 const eventTeamCount = (event) => Number(event?.teams || event?.teamCount || 16);
 const rankedTeams = (rankings) => [...rankings].sort((a, b) => Number(a.currentRank || a.ranking || 999) - Number(b.currentRank || b.ranking || 999));
 const inviteesFor = (event, rankings) => rankedTeams(rankings).slice(0, Math.min(eventTeamCount(event), rankings.length)).map((t) => t.teamId);
@@ -45,7 +46,7 @@ function seedState() {
     tournaments: {},
     playerStatus: {},
     trainingLog: [],
-    saveVersion: 2,
+    saveVersion: SAVE_VERSION,
     currentEventId: null,
     nextEventId: null,
     activeEventId: null,
@@ -60,10 +61,59 @@ function seedState() {
   };
 }
 
+function repairCareerSave(input) {
+  const s = { ...seedState(), ...input };
+  const seenFixtures = new Set();
+  const fixtures = (s.fixtures || []).filter(Boolean).filter((fixture) => {
+    if (!fixture.id || seenFixtures.has(fixture.id)) return false;
+    seenFixtures.add(fixture.id);
+    return true;
+  }).map((fixture) => ({
+    ...fixture,
+    scheduledDate: fixture.scheduledDate || fixture.date,
+    scheduledTime: fixture.scheduledTime || '18:00',
+    sequence: fixture.sequence ?? fixture.bracketPosition ?? 0,
+    dependencyFixtureIds: fixture.dependencyFixtureIds || [],
+    userTeamInvolved: isUserFixture(fixture, s.selectedTeamId),
+  }));
+  const fixtureById = new Map(fixtures.map((fixture) => [fixture.id, fixture]));
+  const seenResults = new Set();
+  const matchResults = (s.matchResults || []).filter(Boolean).filter((result) => {
+    const key = result.id || result.fixtureId;
+    if (!key || seenResults.has(key)) return false;
+    seenResults.add(key);
+    return true;
+  }).map((result) => {
+    const fixture = fixtureById.get(result.fixtureId);
+    return fixture && !isUserFixture(fixture, s.selectedTeamId) ? { ...result, acknowledged: true } : result;
+  });
+  const resultByFixtureId = new Map(matchResults.map((result) => [result.fixtureId, result]));
+  const repairedFixtures = fixtures.map((fixture) => {
+    const result = resultByFixtureId.get(fixture.id) || fixture.result;
+    return result ? { ...fixture, result, status: 'completed', simulated: true } : fixture;
+  });
+  const pending = matchResults.find((result) => result.id === s.pendingMatchResultId);
+  const pendingFixture = pending ? fixtureById.get(pending.fixtureId) : null;
+  return {
+    ...s,
+    currentDate: s.currentDate || CAREER_START_DATE,
+    lastProcessedDay: s.lastProcessedDay || s.currentDate || CAREER_START_DATE,
+    rankings: s.rankings?.[0]?.vrsPoints ? s.rankings : baseRankings(),
+    eventInviteSnapshots: s.eventInviteSnapshots || {},
+    calendarEvents: s.calendarEvents || [],
+    fixtures: repairedFixtures,
+    matchResults,
+    pendingMatchResultId: pending && pendingFixture && isUserFixture(pendingFixture, s.selectedTeamId) && !pending.acknowledged ? pending.id : null,
+    tournaments: s.tournaments || {},
+    playerStatus: s.playerStatus || {},
+    trainingLog: s.trainingLog || [],
+    saveVersion: SAVE_VERSION,
+  };
+}
+
 function loadCareer() {
   try {
-    const s = { ...seedState(), ...JSON.parse(localStorage.getItem(STORAGE_KEY)) };
-    return { ...s, currentDate: s.currentDate || CAREER_START_DATE, lastProcessedDay: s.lastProcessedDay || s.currentDate || CAREER_START_DATE, rankings: s.rankings?.[0]?.vrsPoints ? s.rankings : baseRankings(), eventInviteSnapshots: s.eventInviteSnapshots || {}, calendarEvents: s.calendarEvents || [], fixtures: s.fixtures || [], matchResults: s.matchResults || [], pendingMatchResultId: s.pendingMatchResultId || null, tournaments: s.tournaments || {}, playerStatus: s.playerStatus || {}, trainingLog: s.trainingLog || [], saveVersion: 2 };
+    return repairCareerSave(JSON.parse(localStorage.getItem(STORAGE_KEY)) || {});
   } catch {
     return seedState();
   }
@@ -219,9 +269,9 @@ export function useGameStateValue() {
       events: datedEvents(),
       ...career,
       activeTournament: career.activeTournament || null,
-      nextFixture: getNextFixture(career),
+      nextFixture: getNextUserFixture(career),
       primaryCareerAction: getPrimaryCareerAction(career),
-      pendingMatchResult: (career.matchResults || []).find((m) => m.id === career.pendingMatchResultId) || null,
+      pendingMatchResult: getPendingUserMatchResult(career),
       currentDateLabel: formatDate(career.currentDate),
       playerTeamId: career.selectedTeamId || initialData.playerTeamId,
       phase: career.currentPhase,
@@ -237,7 +287,7 @@ export function useGameStateValue() {
     if (!team) return s;
     const generated = generateInitialFixtures({ events: datedEvents(), rankings: s.rankings, teams: initialData.teams, selectedTeamId: teamId });
     return addInbox(
-      { ...s, careerStarted: true, selectedTeamId: teamId, currentDate: CAREER_START_DATE, currentMonth: monthNameFromDate(CAREER_START_DATE), currentPhase: 'dashboard', fixtures: generated.fixtures, calendarEvents: generated.calendarEvents, tournaments: generated.tournaments, matchResults: [], saveVersion: 2 },
+      { ...s, careerStarted: true, selectedTeamId: teamId, currentDate: CAREER_START_DATE, currentMonth: monthNameFromDate(CAREER_START_DATE), currentPhase: 'dashboard', fixtures: generated.fixtures, calendarEvents: generated.calendarEvents, tournaments: generated.tournaments, matchResults: [], saveVersion: SAVE_VERSION },
       'Career started',
       `You have taken charge of ${team.name}.`,
       'career',
@@ -252,7 +302,7 @@ export function useGameStateValue() {
     return processDailySimulation(s, initialData);
   });
 
-  const playFixture = (fixtureId) => save((s) => simulateFixture(s, fixtureId, initialData).state);
+  const playFixture = (fixtureId) => save((s) => simulateFixture(s, fixtureId, initialData, { userInitiated:true }).state);
 
   const acknowledgeMatchResult = () => save((s) => ({
     ...s,
