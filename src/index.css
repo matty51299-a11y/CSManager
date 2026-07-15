@@ -522,6 +522,80 @@ tbody tr:hover td { background: var(--fm-hover); }
 .mapthumb-score { font-size: 17px; font-weight: 900; letter-spacing: 0.02em; }
 .mapthumb-score i { color: var(--fm-text-3); margin: 0 5px; font-style: normal; }
 
+/* ============================================================
+   Map veto strip + kill heatmap (Phase 5)
+   ============================================================ */
+.veto-strip { display: flex; flex-wrap: wrap; gap: 10px; }
+.veto-card { display: grid; gap: 6px; justify-items: center; }
+.veto-thumb { position: relative; display: inline-flex; border-radius: 4px; overflow: hidden; }
+.veto-card.veto-ban .veto-thumb { filter: grayscale(0.7) brightness(0.6); }
+.veto-card.veto-ban .veto-thumb::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, transparent 46%, rgba(241, 38, 70, 0.85) 46% 54%, transparent 54%);
+}
+.veto-crest { position: absolute; top: 5px; left: 5px; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7)); }
+.veto-mapname {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 3px 6px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;
+  color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+}
+.veto-label { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.6px; }
+.veto-label-ban { color: var(--fm-red); }
+.veto-label-pick { color: var(--fm-accent); }
+.veto-label-decider { color: var(--fm-gold); }
+.veto-empty {
+  width: 104px; height: 128px; border: 1px dashed var(--fm-border); border-radius: 4px;
+  display: grid; place-content: center; gap: 4px; background: rgba(255, 255, 255, 0.02);
+}
+.veto-plus { font-size: 34px; font-weight: 300; color: var(--fm-text-3); text-align: center; }
+
+.heatmap-controls { display: flex; align-items: end; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+.heatmap-controls label { display: flex; flex-direction: column; gap: 4px; color: var(--fm-text-3); font-size: 10px; font-weight: 800; letter-spacing: 0.4px; text-transform: uppercase; }
+.heatmap-controls select { min-width: 150px; }
+.heatmap-count { color: var(--fm-text-2); font-size: 12px; font-weight: 800; padding-bottom: 8px; }
+.heatmap-canvas {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  aspect-ratio: 1 / 1;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--fm-border);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.5);
+}
+.heatmap-layout { position: absolute; inset: 0; width: 100%; height: 100%; fill: rgba(255, 255, 255, 0.05); stroke: rgba(255, 255, 255, 0.12); stroke-width: 0.8; }
+.heatmap-layout .heatmap-site { fill: rgba(255, 255, 255, 0.5); font-size: 9px; font-weight: 800; stroke: none; }
+.heatmap-dot {
+  position: absolute;
+  width: 9px; height: 9px; border-radius: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 6px 1px rgba(0, 0, 0, 0.5);
+  opacity: 0.82;
+  mix-blend-mode: screen;
+}
+
+/* ============================================================
+   Phase 4 polish — headline numerals, card padding, hover states
+   ============================================================ */
+.stat-item .value { font-size: 18px; }
+.mini-stat strong { font-size: 16px; }
+.stat-item, .mini-stat, .news-item { transition: border-color 0.12s, background 0.12s; }
+.stat-item:hover, .mini-stat:hover { border-color: var(--fm-border-soft); background: rgba(255, 255, 255, 0.035); }
+.news-item:hover { border-color: var(--fm-border-soft); }
+
+.budget-card, .event-intel-card, .calendar-card { transition: border-color 0.14s, transform 0.14s, box-shadow 0.14s; }
+.budget-card:hover, .event-intel-card:hover, .calendar-card:hover {
+  border-color: var(--fm-border-soft);
+  transform: translateY(-2px);
+  box-shadow: var(--fm-shadow-card);
+}
+.risk-row, .training-card { transition: background 0.12s; }
+.risk-row:hover { background: rgba(255, 255, 255, 0.025); }
+
+/* Consistent clickable-row affordance */
+.clickable-row { transition: background 0.1s; }
+
 .fm-pos {
   display: inline-block;
   min-width: 34px;
