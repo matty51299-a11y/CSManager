@@ -42,6 +42,10 @@ function seedState() {
     fixtures: [],
     matchResults: [],
     pendingMatchResultId: null,
+    tournaments: {},
+    playerStatus: {},
+    trainingLog: [],
+    saveVersion: 2,
     currentEventId: null,
     nextEventId: null,
     activeEventId: null,
@@ -59,7 +63,7 @@ function seedState() {
 function loadCareer() {
   try {
     const s = { ...seedState(), ...JSON.parse(localStorage.getItem(STORAGE_KEY)) };
-    return { ...s, currentDate: s.currentDate || CAREER_START_DATE, lastProcessedDay: s.lastProcessedDay || s.currentDate || CAREER_START_DATE, rankings: s.rankings?.[0]?.vrsPoints ? s.rankings : baseRankings(), eventInviteSnapshots: s.eventInviteSnapshots || {}, calendarEvents: s.calendarEvents || [], fixtures: s.fixtures || [], matchResults: s.matchResults || [], pendingMatchResultId: s.pendingMatchResultId || null };
+    return { ...s, currentDate: s.currentDate || CAREER_START_DATE, lastProcessedDay: s.lastProcessedDay || s.currentDate || CAREER_START_DATE, rankings: s.rankings?.[0]?.vrsPoints ? s.rankings : baseRankings(), eventInviteSnapshots: s.eventInviteSnapshots || {}, calendarEvents: s.calendarEvents || [], fixtures: s.fixtures || [], matchResults: s.matchResults || [], pendingMatchResultId: s.pendingMatchResultId || null, tournaments: s.tournaments || {}, playerStatus: s.playerStatus || {}, trainingLog: s.trainingLog || [], saveVersion: 2 };
   } catch {
     return seedState();
   }
@@ -233,7 +237,7 @@ export function useGameStateValue() {
     if (!team) return s;
     const generated = generateInitialFixtures({ events: datedEvents(), rankings: s.rankings, teams: initialData.teams, selectedTeamId: teamId });
     return addInbox(
-      { ...s, careerStarted: true, selectedTeamId: teamId, currentDate: CAREER_START_DATE, currentMonth: monthNameFromDate(CAREER_START_DATE), currentPhase: 'dashboard', fixtures: generated.fixtures, calendarEvents: generated.calendarEvents, matchResults: [] },
+      { ...s, careerStarted: true, selectedTeamId: teamId, currentDate: CAREER_START_DATE, currentMonth: monthNameFromDate(CAREER_START_DATE), currentPhase: 'dashboard', fixtures: generated.fixtures, calendarEvents: generated.calendarEvents, tournaments: generated.tournaments, matchResults: [], saveVersion: 2 },
       'Career started',
       `You have taken charge of ${team.name}.`,
       'career',

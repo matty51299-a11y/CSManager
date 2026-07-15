@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { CAREER_START_DATE, formatDate } from '../src/utils/calendarDates.js';
 import { advanceOneDay, getDaysUntil } from '../src/utils/careerClock.js';
-import { getPrimaryCareerAction, processDailySimulation, simulateFixture } from '../src/utils/careerSimulation.js';
+import { generateInitialFixtures, getPrimaryCareerAction, processDailySimulation, simulateFixture } from '../src/utils/careerSimulation.js';
 import { simulateMatch } from '../src/utils/matchEngine.js';
 
 const teams = [
@@ -106,7 +106,7 @@ try {
 
   const migrated = dashboardState({ fixtures: [undefined, { id:'bad1' }, { id:'bad2', scheduledDate:'bad-date', teamAId:null, status:'scheduled' }, ...generated.fixtures] });
   assert.doesNotThrow(() => renderDashboard(migrated));
-  assert.equal(getNextFixture({ currentDate:'2026-01-08', selectedTeamId:'team_vitality', fixtures:[undefined, { id:'bad' }, ...generated.fixtures] })?.id, 'fixture-blast-bounty-s1-group-1');
+  assert.equal(getNextFixture({ currentDate:'2026-01-08', selectedTeamId:'team_vitality', fixtures:[undefined, { id:'bad' }, ...generated.fixtures] })?.id, 'fixture-blast-bounty-s1-semifinal-1-team-vitality-betboom');
 
   let actionState = dashboardState({ currentDate: '2026-01-01' });
   for (let i = 0; i < 7; i += 1) actionState = { ...processDailySimulation(actionState, initialData), teams, players, events, rankings, completedEvents: [] };
@@ -114,4 +114,50 @@ try {
 } finally {
   await vite.close();
 }
+
+
+// Integration: persisted single-elimination progression creates later rounds and champion once.
+{
+  const events = [{ eventId:'cup', name:'Test Cup', teams:4, startDate:'2026-01-03', endDate:'2026-01-08', format:'single_elim', prizePool:100000, rankingWeight:50 }];
+  const generated = generateInitialFixtures({ events, rankings: teams.map((t,i)=>({...t, rank:i+1, vrsPoints:1000-i})), teams, selectedTeamId:'team_vitality' });
+  let st = { ...state('2026-01-03'), fixtures: generated.fixtures, calendarEvents: generated.calendarEvents, tournaments: generated.tournaments };
+  assert.equal(st.fixtures.filter((f)=>f.stageId==='semifinal').length, 2);
+  st = simulateFixture(st, st.fixtures[0].id, { ...initialData, events }).state;
+  st = simulateFixture(st, st.fixtures[1].id, { ...initialData, events }).state;
+  assert.equal(st.fixtures.filter((f)=>f.stageId==='final').length, 1);
+  const finalId = st.fixtures.find((f)=>f.stageId==='final').id;
+  st.currentDate = st.fixtures.find((f)=>f.id===finalId).scheduledDate;
+  st = simulateFixture(st, finalId, { ...initialData, events }).state;
+  assert.equal(st.tournaments.cup.status, 'completed');
+  assert.ok(st.tournaments.cup.champion);
+  const again = simulateFixture(st, finalId, { ...initialData, events });
+  assert.equal(again.error, 'Match already completed.');
+  assert.equal(st.fixtures.filter((f)=>f.status!=='completed' && [f.teamAId,f.teamBId].includes(st.tournaments.cup.runnerUp)).length, 0);
+}
+
+// Integration: group-to-playoff standings persist and qualified teams advance.
+{
+  const events = [{ eventId:'groups', name:'Groups Cup', teams:4, startDate:'2026-01-03', endDate:'2026-01-10', format:'two_groups_to_playoffs', prizePool:100000, rankingWeight:50 }];
+  const generated = generateInitialFixtures({ events, rankings: teams.map((t,i)=>({...t, rank:i+1, vrsPoints:1000-i})), teams, selectedTeamId:'team_vitality' });
+  let st = { ...state('2026-01-03'), fixtures: generated.fixtures, calendarEvents: generated.calendarEvents, tournaments: generated.tournaments };
+  for (const f of st.fixtures.filter((x)=>x.stageId==='group')) st = simulateFixture(st, f.id, { ...initialData, events }).state;
+  assert.ok(Object.values(st.tournaments.groups.groupTables).every((table)=>table.rows.every((row)=>row.played >= 1 && row.position > 0)));
+  assert.ok(st.fixtures.some((f)=>f.stageId==='semifinal' || f.stageId==='final'));
+}
+
+// Integration: daily systems recover fatigue, process training and block user match day.
+{
+  let st = state('2026-01-05');
+  st.playerStatus = { 'team_vitality-0': { fitness:80, condition:70, fatigue:50, injuryStatus:'injured', injuryRecoveryDate:'2026-01-06', matchSharpness:50, morale:60, recentWorkload:2, developmentProgress:0 } };
+  st.fixtures = [{ id:'block', tournamentId:'blast_bounty_s1', scheduledDate:'2026-01-05', bestOf:3, teamAId:'team_vitality', teamBId:'betboom', userTeamInvolved:true, simulated:false, status:'scheduled', round:'Group Stage - Match 2' }];
+  assert.equal(processDailySimulation(st, initialData).currentDate, '2026-01-05');
+  st.fixtures = [];
+  st = processDailySimulation(st, initialData);
+  assert.equal(st.currentDate, '2026-01-06');
+  assert.equal(st.playerStatus['team_vitality-0'].injuryStatus, 'healthy');
+  assert.ok(st.playerStatus['team_vitality-0'].fatigue < 50);
+  assert.ok(st.trainingLog.length >= 1);
+}
+console.log('integration career flow tests passed');
+
 console.log('dashboard regression tests passed');
