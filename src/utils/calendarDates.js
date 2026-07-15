@@ -1,4 +1,4 @@
-export const CAREER_START_DATE = '2026-01-07';
+export const CAREER_START_DATE = '2026-01-01';
 export const FALLBACK_EVENT_DATES = {
   'BLAST Bounty Season 1': ['2026-01-13', '2026-01-25'],
   'IEM Katowice': ['2026-01-28', '2026-02-08'],
@@ -37,3 +37,5 @@ export function enrichEventsWithDates(events = []) {
   }).sort((a,b)=>parseDate(a.startDate)-parseDate(b.startDate));
 }
 export function compareDate(a,b){ return parseDate(a)-parseDate(b); }
+
+export function addDays(value, days) { const d = parseDate(value); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); }

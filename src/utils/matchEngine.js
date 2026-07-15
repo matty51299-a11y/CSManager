@@ -8,7 +8,7 @@ function clamp(value, min, max) {
 function seededNoise(seed) {
   let hash = 0;
   for (let i = 0; i < seed.length; i += 1) hash = (hash * 31 + seed.charCodeAt(i)) % 9973;
-  return clamp(((hash % 1000) / 1000) * 0.65 + Math.random() * 0.35, 0, 1);
+  return clamp(((hash % 1000) / 1000) * 0.65 + 0, 0, 1);
 }
 
 function scoreline(strengthA, strengthB, seed) {
@@ -109,7 +109,7 @@ function selectPerformers(allStats) {
   return { topFragger: sortedKills[0], highestRated: sortedRating[0], clutchPlayer: sortedClutch[0], underperformer: sortedUnder[0] };
 }
 
-export function simulateMatch({ teamA, teamB, players = [], teamMapRatings = [], bestOf = 1 }) {
+export function simulateMatch({ teamA, teamB, players = [], teamMapRatings = [], bestOf = 1, seed = 'match' }) {
   const safeBestOf = [1, 3, 5].includes(Number(bestOf)) ? Number(bestOf) : 1;
   if (!teamA || !teamB || teamA.teamId === teamB.teamId) {
     return { ok: false, error: 'Choose two different teams before simulating.' };
@@ -125,11 +125,11 @@ export function simulateMatch({ teamA, teamB, players = [], teamMapRatings = [],
     if (winsA === mapsToWin || winsB === mapsToWin) break;
     const strengthA = calculateTeamStrength(teamA, players, teamMapRatings, map.key);
     const strengthB = calculateTeamStrength(teamB, players, teamMapRatings, map.key);
-    const score = scoreline(strengthA.total, strengthB.total, `${teamA.teamId}-${teamB.teamId}-${map.key}-${maps.length}-bo${safeBestOf}-${Date.now()}`);
+    const score = scoreline(strengthA.total, strengthB.total, `${seed}-${teamA.teamId}-${teamB.teamId}-${map.key}-${maps.length}-bo${safeBestOf}`);
     const winner = score.winner === 'A' ? teamA : teamB;
     if (score.winner === 'A') winsA += 1; else winsB += 1;
-    const teamAStats = makePlayerStats(strengthA.players, score.winner === 'A', strengthA.total, strengthB.total, `${map.key}-a`);
-    const teamBStats = makePlayerStats(strengthB.players, score.winner === 'B', strengthB.total, strengthA.total, `${map.key}-b`);
+    const teamAStats = makePlayerStats(strengthA.players, score.winner === 'A', strengthA.total, strengthB.total, `${seed}-${map.key}-a`);
+    const teamBStats = makePlayerStats(strengthB.players, score.winner === 'B', strengthB.total, strengthA.total, `${seed}-${map.key}-b`);
     maps.push({
       mapKey: map.key,
       mapName: map.name,
@@ -153,7 +153,7 @@ export function simulateMatch({ teamA, teamB, players = [], teamMapRatings = [],
         score.winner === 'B' ? score.winnerRounds : score.loserRounds,
         strengthA.total,
         strengthB.total,
-        `${teamA.teamId}-${teamB.teamId}-${map.key}-${maps.length}`,
+        `${seed}-${teamA.teamId}-${teamB.teamId}-${map.key}-${maps.length}`,
       ),
     });
   }
