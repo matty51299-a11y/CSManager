@@ -20,6 +20,8 @@ import Transfers from './pages/Transfers';
 import EventHub from './pages/EventHub';
 import EventReadyModal from './components/EventReadyModal';
 import { useGameState } from './state';
+import { PreMatchModal, ResultModal } from './components/MatchModals';
+import { useState } from 'react';
 
 function EventHubRoute({ gameState, actions }) {
   const navigate = useNavigate();
@@ -37,6 +39,7 @@ function EventHubRoute({ gameState, actions }) {
 }
 
 export default function App() {
+  const [preMatchFixtureId, setPreMatchFixtureId] = useState(null);
   const actions = useGameState();
   const { gameState } = actions;
   const inEventMode = gameState.currentPhase?.startsWith('event_active') || (gameState.currentPhase === 'event_complete' && gameState.activeTournament);
@@ -55,7 +58,7 @@ export default function App() {
     <BrowserRouter>
       <WeaponSprite />
       <div className={inEventMode ? 'fm-shell event-app-mode' : 'fm-shell'}>
-        {!inEventMode && <TopNav gameState={gameState} actions={actions} />}
+        {!inEventMode && <TopNav gameState={gameState} actions={actions} onPlayMatch={(fixtureId) => setPreMatchFixtureId(fixtureId)} />}
         <div className={inEventMode ? 'app-layout event-app-mode' : 'app-layout'}>
         <main className={inEventMode ? 'main-content event-main-content' : 'main-content'}>
           <ErrorBoundary onReset={actions.resetCareer}>
@@ -84,6 +87,8 @@ export default function App() {
               window.history.pushState(null, '', dest); window.dispatchEvent(new PopStateEvent('popstate'));
             }} viewCalendar={() => { window.history.pushState(null, '', '/calendar'); window.dispatchEvent(new PopStateEvent('popstate')); }} />}
           </ErrorBoundary>
+            <PreMatchModal gameState={gameState} fixture={(gameState.fixtures || []).find((f) => f.id === preMatchFixtureId)} onClose={() => setPreMatchFixtureId(null)} onPlay={(fixtureId) => { actions.playFixture(fixtureId); setPreMatchFixtureId(null); }} />
+            <ResultModal gameState={gameState} result={gameState.pendingMatchResult} onClose={actions.acknowledgeMatchResult} onTournament={() => { const tid = gameState.pendingMatchResult?.tournamentId; actions.acknowledgeMatchResult(); window.history.pushState(null, '', `/tournaments/${tid}`); window.dispatchEvent(new PopStateEvent('popstate')); }} />
         </main>
         </div>
       </div>

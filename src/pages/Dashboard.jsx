@@ -17,12 +17,16 @@ function posZone(rank, total) {
   return 'zone-mid';
 }
 
-export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, resetCareer }) {
+export default function Dashboard({ gameState, resetCareer }) {
   const navigate = useNavigate();
   const myTeam = gameState.teams.find((t) => t.teamId === gameState.selectedTeamId);
   const myPlayers = gameState.players.filter((p) => p.teamId === gameState.selectedTeamId && p.status === 'active');
   const tableTeams = [...gameState.teams].sort((a, b) => a.currentRank - b.currentRank);
   const nextEvents = [...gameState.events].sort((a, b) => compareDate(a.startDate, b.startDate));
+  const nextFixture = gameState.nextFixture;
+  const nextFixtureEvent = nextFixture ? gameState.events.find((e) => e.eventId === nextFixture.tournamentId) : null;
+  const nextFixtureOpponent = nextFixture ? gameState.teams.find((t) => t.teamId === (nextFixture.teamAId === gameState.selectedTeamId ? nextFixture.teamBId : nextFixture.teamAId)) : null;
+  const daysUntilNextFixture = nextFixture ? Math.round((new Date(`${nextFixture.scheduledDate}T00:00:00Z`) - new Date(`${gameState.currentDate}T00:00:00Z`)) / 86400000) : null;
   const completedIds = new Set(gameState.completedEvents.map((e) => e.eventId));
   const nextEvent = nextEvents.find((e) => !completedIds.has(e.eventId));
   const activeOrNextEvent = gameState.currentEventId ? gameState.events.find((e) => e.eventId === gameState.currentEventId) : nextEvent;
@@ -48,18 +52,6 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
   const latestNews = (gameState.inboxItems || []).slice(0, 4);
   const lastResult = (gameState.completedEvents || [])[0];
 
-  // Real series score for the featured event centrepiece — only when the
-  // featured event has actually been (or is being) played. A brand-new,
-  // unplayed next fixture has no score, so the score element is omitted.
-  const featuredIsLive = activeOrNextEvent && gameState.currentEventId === activeOrNextEvent.eventId;
-  const liveRecord = featuredIsLive ? gameState.teamRecords?.[gameState.selectedTeamId] : null;
-  const finishedRecord = lastResult && activeOrNextEvent && lastResult.eventId === activeOrNextEvent.eventId ? lastResult.userRecord : null;
-  const centreScore = finishedRecord
-    ? { wins: finishedRecord.wins, losses: finishedRecord.losses, label: 'Final Record' }
-    : liveRecord && (liveRecord.wins || liveRecord.losses)
-      ? { wins: liveRecord.wins, losses: liveRecord.losses, label: 'Series Record' }
-      : null;
-
   return (
     <div className="dashboard-page">
       {/* ---- Next match / event centrepiece ---- */}
@@ -69,7 +61,7 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
           <span className="status-pill status-current">{(gameState.currentPhase || '').replace(/_/g, ' ')}</span>
         </div>
         <div className="panel-body">
-          <div className="nm-strip">Next {activeOrNextEvent ? 'Event' : 'Fixture'}</div>
+          <div className="nm-strip">{nextFixture && nextFixture.scheduledDate === gameState.currentDate ? 'MATCH DAY' : 'Next Match'}</div>
           <div className="nm-main">
             <div className="nm-side">
               {myTeam && <Crest team={myTeam} size={52} />}
@@ -77,48 +69,23 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
               <div className="nm-team-sub">VRS #{myTeam?.currentRank ?? '—'} · {myTeam?.region}</div>
             </div>
             <div className="nm-centre">
-              {activeOrNextEvent ? (
-                <>
-                  <div className="nm-title">{activeOrNextEvent.name}</div>
-                  <div className="nm-date">{formatDate(activeOrNextEvent.startDate)} — {formatDate(activeOrNextEvent.endDate)}</div>
-                  <div className="nm-meta">{activeOrNextEvent.eventType || 'Tournament'} · {activeOrNextEvent.tier} Tier · Top {activeOrNextEvent.teams || 16}</div>
-                  {centreScore && (
-                    <>
-                      <div className="nm-score">
-                        <span className="nm-score-a">{centreScore.wins}</span>
-                        <span className="nm-score-sep">vs</span>
-                        <span className="nm-score-b">{centreScore.losses}</span>
-                      </div>
-                      <div className="nm-score-label">{centreScore.label}</div>
-                    </>
-                  )}
-                  <div className="inline-actions" style={{ justifyContent: 'center', marginTop: 10 }}>
-                    {!gameState.currentPhase.startsWith('event_active') && gameState.currentPhase !== 'event_ready' && (
-                      <button onClick={advanceToNextEvent}>Advance To Event</button>
-                    )}
-                    {gameState.currentPhase === 'event_ready' && (
-                      <button onClick={() => { enterEvent(); navigate('/event-hub'); }}>Enter Event</button>
-                    )}
-                    {gameState.currentPhase.startsWith('event_active') && (
-                      <button onClick={() => navigate('/event-hub')}>Open Event Mode</button>
-                    )}
-                    <button className="ghost-button" onClick={resetCareer}>Reset Career</button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="nm-title">Season Complete</div>
-                  <div className="nm-date">No remaining scheduled events</div>
-                  <div className="inline-actions" style={{ justifyContent: 'center', marginTop: 10 }}>
-                    <button className="ghost-button" onClick={resetCareer}>Reset Career</button>
-                  </div>
-                </>
-              )}
+              {nextFixture ? (<>
+                <div className="nm-title">vs {nextFixtureOpponent?.name || 'TBD'}</div>
+                <div className="nm-date">{formatDate(nextFixture.scheduledDate)} · {daysUntilNextFixture === 0 ? 'Today' : `In ${daysUntilNextFixture} days`}</div>
+                <div className="nm-meta">{nextFixtureEvent?.name || 'Tournament'} · {nextFixture.round} · Best of {nextFixture.bestOf}</div>
+                <div className="inline-actions" style={{ justifyContent: 'center', marginTop: 10 }}>
+                  <button onClick={() => navigate('/calendar')}>View Fixtures</button>
+                  <button className="ghost-button" onClick={resetCareer}>Reset Career</button>
+                </div>
+              </>) : (<>
+                <div className="nm-title">No scheduled fixture</div><div className="nm-date">Continue to process the calendar</div>
+                <div className="inline-actions" style={{ justifyContent: 'center', marginTop: 10 }}><button className="ghost-button" onClick={resetCareer}>Reset Career</button></div>
+              </>)}
             </div>
             <div className="nm-side">
-              <span className="nm-event-badge">{(activeOrNextEvent?.name || 'CS').split(/\s+/).map((w) => w[0]).join('').slice(0, 3).toUpperCase()}</span>
-              <div className="nm-team-name">{activeOrNextEvent ? formatMoney(activeOrNextEvent.prizePool) : '—'}</div>
-              <div className="nm-team-sub">Prize Pool</div>
+              {nextFixtureOpponent && <Crest team={nextFixtureOpponent} size={52} />}
+              <div className="nm-team-name">{nextFixtureOpponent?.shortName || '—'}</div>
+              <div className="nm-team-sub">Opponent</div>
             </div>
           </div>
           <div className="nm-footer">
@@ -203,15 +170,15 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
           <section className="panel">
             <div className="panel-header"><h2>Fixtures</h2><Link to="/calendar">Schedule</Link></div>
             <div className="panel-body">
-              {nextEvents.filter((e) => !completedIds.has(e.eventId)).slice(0, 5).map((e) => (
-                <div key={e.eventId} className="risk-row">
+              {(gameState.fixtures || []).filter((f) => !f.simulated && [f.teamAId, f.teamBId].includes(gameState.selectedTeamId)).slice(0, 5).map((f) => { const e = gameState.events.find((ev) => ev.eventId === f.tournamentId); const opp = gameState.teams.find((t) => t.teamId === (f.teamAId === gameState.selectedTeamId ? f.teamBId : f.teamAId)); return (
+                <div key={f.id} className="risk-row">
                   <div className="risk-who">
-                    <b><Link to={`/tournaments/${e.eventId}`}>{e.name}</Link></b>
-                    <span>{formatDate(e.startDate)} · {e.eventType || 'Tournament'}</span>
+                    <b><Link to={`/tournaments/${e?.eventId}`}>vs {opp?.shortName || 'TBD'}</Link></b>
+                    <span>{formatDate(f.scheduledDate)} · {e?.name} · {f.round}</span>
                   </div>
-                  <span className={tierBadgeClass(e.tier)}>{e.tier}</span>
+                  <span className={tierBadgeClass(e?.tier)}>{e?.tier}</span>
                 </div>
-              ))}
+              ); })}
             </div>
           </section>
         </div>
@@ -264,7 +231,7 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
                 const isCurrent = gameState.currentEventId === e.eventId;
                 const inv = gameState.eventInviteSnapshots?.[e.eventId]?.invitees?.some((x) => x.teamId === gameState.selectedTeamId) || (myTeam?.currentRank <= (e.teams || 16));
                 return (
-                  <div key={e.eventId} className={`event-intel-card ${isCurrent ? 'current' : ''}`}>
+                  <div key={f.id} className={`event-intel-card ${isCurrent ? 'current' : ''}`}>
                     <div className="event-card-head"><Link to={`/tournaments/${e.eventId}`}>{e.name}</Link><span className={tierBadgeClass(e.tier)}>{e.tier}</span></div>
                     <div className="muted">{formatDate(e.startDate)} – {formatDate(e.endDate)}</div>
                     <div className="event-card-meta">

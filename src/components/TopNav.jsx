@@ -73,7 +73,7 @@ function sectionForPath(pathname) {
   return best;
 }
 
-export default function TopNav({ gameState, actions }) {
+export default function TopNav({ gameState, actions, onPlayMatch }) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -82,14 +82,13 @@ export default function TopNav({ gameState, actions }) {
   const phase = gameState.currentPhase || 'dashboard';
   const activeSection = sectionForPath(location.pathname);
 
-  let continueLabel = 'Continue';
-  let onContinue = () => actions.advanceToNextEvent();
-  if (phase === 'event_ready') {
-    continueLabel = 'Enter Event';
-    onContinue = () => { actions.enterEvent(); navigate('/event-hub'); };
-  } else if (phase.startsWith('event_active')) {
-    continueLabel = 'Go To Event';
-    onContinue = () => navigate('/event-hub');
+  const primaryAction = gameState.primaryCareerAction || { type: 'CONTINUE', label: 'CONTINUE' };
+  let continueLabel = primaryAction.label || 'CONTINUE';
+  let onContinue = () => actions.continueCareer();
+  if (primaryAction.type === 'PLAY_MATCH') {
+    onContinue = () => onPlayMatch?.(primaryAction.fixtureId);
+  } else if (primaryAction.type === 'RESPOND') {
+    onContinue = () => navigate('/inbox');
   } else if (phase === 'season_complete') {
     continueLabel = 'Season Over';
     onContinue = () => navigate('/calendar');
@@ -142,6 +141,7 @@ export default function TopNav({ gameState, actions }) {
             <b>{gameState.currentDateLabel || gameState.currentMonth || '—'}</b>
             <span>{phase.replace(/_/g, ' ')}</span>
           </div>
+          {primaryAction.type === 'PLAY_MATCH' && gameState.nextFixture && <div className="fn-match-context"><b>{gameState.nextFixture.round}</b><span>Best of {gameState.nextFixture.bestOf}</span></div>}
           <button type="button" className="fn-continue" onClick={onContinue}>{continueLabel}</button>
         </div>
       </div>

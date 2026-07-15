@@ -1,10 +1,13 @@
 import { useParams, Link } from 'react-router-dom';
 import { tierBadgeClass, formatMoney } from '../utils/helpers';
+import { formatDate } from '../utils/calendarDates';
 
 export default function TournamentDetail({ gameState }) {
   const { tournamentId } = useParams();
   const event = gameState.events.find((e) => e.eventId === tournamentId);
   if (!event) return <div className="panel"><div className="panel-body">Event not found.</div></div>;
+  const fixtures = (gameState.fixtures || []).filter((f) => f.tournamentId === tournamentId);
+  const results = (gameState.matchResults || []).filter((m) => m.tournamentId === tournamentId);
 
   return (
     <div>
@@ -57,14 +60,8 @@ export default function TournamentDetail({ gameState }) {
         </div>
       )}
 
-      <div className="panel">
-        <div className="panel-header"><h2>Status</h2></div>
-        <div className="panel-body">
-          <p style={{ color: 'var(--text-secondary)' }}>
-            Tournament simulation is not yet implemented. Participants and results will be available in a future update.
-          </p>
-        </div>
-      </div>
+      <div className="panel"><div className="panel-header"><h2>Fixtures</h2></div><div className="panel-body">{fixtures.length === 0 && <p style={{ color: 'var(--text-secondary)' }}>No fixtures generated yet.</p>}{fixtures.map((f) => { const a = gameState.teams.find((t) => t.teamId === f.teamAId); const b = gameState.teams.find((t) => t.teamId === f.teamBId); return <div key={f.id} className="risk-row"><div className="risk-who"><b>{a?.shortName} vs {b?.shortName}</b><span>{formatDate(f.scheduledDate)} · {f.round} · Best of {f.bestOf}</span></div><span>{f.status}</span></div>; })}</div></div>
+      <div className="panel"><div className="panel-header"><h2>Results</h2></div><div className="panel-body">{results.length === 0 && <p style={{ color: 'var(--text-secondary)' }}>No completed results yet.</p>}{results.map((m) => <div key={m.id} className="risk-row"><div className="risk-who"><b>{m.winner.shortName} beat {m.loser.shortName} {m.seriesScore}</b><span>{formatDate(m.date)} · MVP {m.matchMvp?.gamertag} ({m.matchMvp?.rating})</span></div><span>{m.stage}</span></div>)}</div></div>
 
       <div style={{ marginTop: 12 }}>
         <Link to="/calendar">Back to Calendar</Link>

@@ -1,6 +1,7 @@
 import { createContext, createElement, useContext, useEffect, useMemo, useState } from 'react';
 import initialData from '../data/gameState.js';
 import { CAREER_START_DATE, compareDate, dateInRange, enrichEventsWithDates, formatDate, monthNameFromDate } from '../utils/calendarDates.js';
+import { generateInitialFixtures, getNextFixture, getPrimaryCareerAction, processDailySimulation, simulateFixture } from '../utils/careerSimulation.js';
 import { getRankingRows, initializeVrsRankings, updateRankingsAfterEvent } from '../utils/vrsRankingEngine.js';
 import { buildInviteSnapshot, getInviteStatus, snapshotTeams } from '../utils/eventInviteEngine.js';
 import { getEventFormat, isBreakEvent } from '../utils/eventFormatEngine.js';
@@ -36,6 +37,11 @@ function seedState() {
     currentDate: CAREER_START_DATE,
     currentMonth: 'January',
     currentPhase: 'no_career',
+    lastProcessedDay: CAREER_START_DATE,
+    calendarEvents: [],
+    fixtures: [],
+    matchResults: [],
+    pendingMatchResultId: null,
     currentEventId: null,
     nextEventId: null,
     activeEventId: null,
@@ -53,7 +59,7 @@ function seedState() {
 function loadCareer() {
   try {
     const s = { ...seedState(), ...JSON.parse(localStorage.getItem(STORAGE_KEY)) };
-    return { ...s, rankings: s.rankings?.[0]?.vrsPoints ? s.rankings : baseRankings(), eventInviteSnapshots: s.eventInviteSnapshots || {} };
+    return { ...s, currentDate: s.currentDate || CAREER_START_DATE, lastProcessedDay: s.lastProcessedDay || s.currentDate || CAREER_START_DATE, rankings: s.rankings?.[0]?.vrsPoints ? s.rankings : baseRankings(), eventInviteSnapshots: s.eventInviteSnapshots || {}, calendarEvents: s.calendarEvents || [], fixtures: s.fixtures || [], matchResults: s.matchResults || [], pendingMatchResultId: s.pendingMatchResultId || null };
   } catch {
     return seedState();
   }
@@ -199,13 +205,19 @@ export function useGameStateValue() {
   const gameState = useMemo(() => {
     const rankingRows = getRankingRows(career.rankings, initialData.teams);
     const rankById = new Map(rankingRows.map((row) => [row.teamId, row]));
-    const rankedTeamData = initialData.teams.map((team) => ({ ...team, ...(rankById.get(team.teamId) || {}), ranking: rankById.get(team.teamId)?.currentRank || team.ranking }));
+    const rankedTeamData = initialData.teams.map((team) => {
+      const rank = rankById.get(team.teamId);
+      return { ...team, ...rank, ranking: rank?.currentRank || team.ranking };
+    });
     return ({
       ...initialData,
       teams: rankedTeamData,
       events: datedEvents(),
       ...career,
       activeTournament: career.activeTournament || null,
+      nextFixture: getNextFixture(career),
+      primaryCareerAction: getPrimaryCareerAction(career),
+      pendingMatchResult: (career.matchResults || []).find((m) => m.id === career.pendingMatchResultId) || null,
       currentDateLabel: formatDate(career.currentDate),
       playerTeamId: career.selectedTeamId || initialData.playerTeamId,
       phase: career.currentPhase,
@@ -219,8 +231,9 @@ export function useGameStateValue() {
   const startCareer = (teamId) => save((s) => {
     const team = initialData.teams.find((t) => t.teamId === teamId);
     if (!team) return s;
+    const generated = generateInitialFixtures({ events: datedEvents(), rankings: s.rankings, teams: initialData.teams, selectedTeamId: teamId });
     return addInbox(
-      { ...s, careerStarted: true, selectedTeamId: teamId, currentPhase: 'dashboard' },
+      { ...s, careerStarted: true, selectedTeamId: teamId, currentDate: CAREER_START_DATE, currentMonth: monthNameFromDate(CAREER_START_DATE), currentPhase: 'dashboard', fixtures: generated.fixtures, calendarEvents: generated.calendarEvents, matchResults: [] },
       'Career started',
       `You have taken charge of ${team.name}.`,
       'career',
@@ -228,6 +241,20 @@ export function useGameStateValue() {
   });
 
   const resetCareer = () => { localStorage.removeItem(STORAGE_KEY); setCareer(seedState()); };
+
+
+  const continueCareer = () => save((s) => {
+    if (getPrimaryCareerAction(s).type !== 'CONTINUE') return s;
+    return processDailySimulation(s, initialData);
+  });
+
+  const playFixture = (fixtureId) => save((s) => simulateFixture(s, fixtureId, initialData).state);
+
+  const acknowledgeMatchResult = () => save((s) => ({
+    ...s,
+    pendingMatchResultId: null,
+    matchResults: (s.matchResults || []).map((m) => (m.id === s.pendingMatchResultId ? { ...m, acknowledged: true } : m)),
+  }));
 
   const advanceToNextEvent = () => save((s) => {
     const event = nextUncompletedEvent(s);
@@ -311,6 +338,9 @@ export function useGameStateValue() {
     startCareer,
     resetCareer,
     advanceToNextEvent,
+    continueCareer,
+    playFixture,
+    acknowledgeMatchResult,
     enterEvent,
     // new format-agnostic live actions
     simUserMatch,
