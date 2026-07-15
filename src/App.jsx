@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
-import Sidebar from './components/Sidebar';
-import TopBar from './components/TopBar';
+import TopNav from './components/TopNav';
 import ErrorBoundary from './components/ErrorBoundary';
 import Dashboard from './pages/Dashboard';
 import Teams from './pages/Teams';
@@ -16,6 +15,7 @@ import MatchCentre from './pages/MatchCentre';
 import TournamentCentre from './pages/TournamentCentre';
 import StartCareer from './pages/StartCareer';
 import Inbox from './pages/Inbox';
+import Transfers from './pages/Transfers';
 import EventHub from './pages/EventHub';
 import EventReadyModal from './components/EventReadyModal';
 import { useGameState } from './state';
@@ -53,9 +53,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <div className={inEventMode ? 'fm-shell event-app-mode' : 'fm-shell'}>
-        {!inEventMode && <TopBar gameState={gameState} actions={actions} />}
+        {!inEventMode && <TopNav gameState={gameState} actions={actions} />}
         <div className={inEventMode ? 'app-layout event-app-mode' : 'app-layout'}>
-        {!inEventMode && <Sidebar gameState={gameState} />}
         <main className={inEventMode ? 'main-content event-main-content' : 'main-content'}>
           <ErrorBoundary onReset={actions.resetCareer}>
             <Routes>
@@ -67,6 +66,7 @@ export default function App() {
               <Route path="/rankings" element={<Rankings gameState={gameState} />} />
               <Route path="/calendar" element={<Calendar gameState={gameState} advanceToNextEvent={actions.advanceToNextEvent} enterEvent={actions.enterEvent} />} />
               <Route path="/inbox" element={<Inbox gameState={gameState} />} />
+              <Route path="/transfers" element={<Transfers gameState={gameState} />} />
               <Route path="/event-hub" element={<EventHubRoute gameState={gameState} actions={actions} />} />
               <Route path="/tournaments/:tournamentId" element={<TournamentDetail gameState={gameState} />} />
               <Route path="/roster" element={<Roster gameState={gameState} />} />
