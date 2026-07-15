@@ -8,13 +8,13 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "import:csdb": "node scripts/importCsDatabase.mjs"
+    "import:csdb": "node scripts/importCsDatabase.mjs",
+    "test": "node tests/careerSimulation.test.mjs"
   },
   "dependencies": {
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-router-dom": "^7.18.0",
-    "recharts": "^3.9.2"
+    "react-router-dom": "^7.18.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",

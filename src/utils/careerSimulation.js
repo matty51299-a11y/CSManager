@@ -30,8 +30,8 @@ export function generateInitialFixtures({ events, rankings, teams, selectedTeamI
   return { fixtures, calendarEvents };
 }
 
-export function getTodayUserFixture(state) { return (state.fixtures || []).find((f) => f.userTeamInvolved && !f.simulated && f.status !== 'completed' && isSameDay(f.scheduledDate, state.currentDate)); }
-export function getNextFixture(state, teamId = state.selectedTeamId) { return (state.fixtures || []).filter((f) => !f.simulated && f.status !== 'completed' && [f.teamAId, f.teamBId].includes(teamId) && compareDate(f.scheduledDate, state.currentDate) >= 0).sort((a,b)=>compareDate(a.scheduledDate,b.scheduledDate))[0] || null; }
+export function getTodayUserFixture(state) { return (state.fixtures || []).find((fixture) => fixture?.userTeamInvolved && !fixture.simulated && fixture.status !== 'completed' && fixture.scheduledDate && isSameDay(fixture.scheduledDate, state.currentDate)); }
+export function getNextFixture(state, teamId = state.selectedTeamId) { return (state.fixtures || []).filter((fixture) => fixture && !fixture.simulated && fixture.status !== 'completed' && fixture.scheduledDate && [fixture.teamAId, fixture.teamBId].includes(teamId) && compareDate(fixture.scheduledDate, state.currentDate) >= 0).sort((fixtureA, fixtureB) => compareDate(fixtureA.scheduledDate, fixtureB.scheduledDate))[0] || null; }
 export function getPrimaryCareerAction(state) {
   const fixture = getTodayUserFixture(state);
   if (fixture) return { type: 'PLAY_MATCH', label: 'PLAY MATCH', fixtureId: fixture.id, disabled: false };
@@ -71,8 +71,8 @@ export function processDailySimulation(state, initialData) {
   if (getTodayUserFixture(state)) return state;
   const currentDate = advanceOneDay(state.currentDate);
   let next = { ...state, currentDate, currentMonth: monthNameFromDate(currentDate), lastProcessedDay: currentDate };
-  const dueAi = (next.fixtures||[]).filter((f)=>!f.userTeamInvolved && !f.simulated && compareDate(f.scheduledDate,currentDate)<=0);
-  dueAi.forEach((f)=>{ next = simulateFixture(next, f.id, initialData).state; });
+  const dueAi = (next.fixtures||[]).filter((fixture) => fixture && !fixture.userTeamInvolved && !fixture.simulated && fixture.scheduledDate && compareDate(fixture.scheduledDate,currentDate)<=0);
+  dueAi.forEach((fixture) => { next = simulateFixture(next, fixture.id, initialData).state; });
   if (currentDate.endsWith('-01')) next.inboxItems = [{ id:`finance-${currentDate}`, type:'financeUpdate', title:'Monthly finance update', body:'Salaries, sponsorship and operating costs have been processed.', date:currentDate, createdAt:new Date().toISOString(), blocksProgression:false }, ...(next.inboxItems||[])].slice(0,80);
   if (currentDate.endsWith('-07') || currentDate.endsWith('-14') || currentDate.endsWith('-21') || currentDate.endsWith('-28')) next.inboxItems = [{ id:`training-${currentDate}`, type:'training', title:'Weekly training report', body:'Coaches delivered the weekly development and recovery summary.', date:currentDate, createdAt:new Date().toISOString(), blocksProgression:false }, ...(next.inboxItems||[])].slice(0,80);
   return next;
