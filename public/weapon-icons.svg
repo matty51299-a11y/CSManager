@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <!-- Original, non-trademarked stylised weapon silhouettes for round-history UI.
+       Each symbol uses a 0 0 24 24 viewBox and fills with currentColor. -->
+  <symbol id="wep-rifle" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M2 10h15l2-2h3v2l-3 1v2h-3l-1 2h-2l-1-2H8v3H6v-3H4l-1-1H2z"/>
+  </symbol>
+  <symbol id="wep-ak" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M2 9h13l3-2h4v2l-3 1v2h-2l-2 3-2-3h-2v4H8v-4l-3 2-1-2H2z"/>
+  </symbol>
+  <symbol id="wep-m4" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M2 10h5V8h2v2h9l2-2h2v2l-2 1v2h-3v3h-2v-3H9l-1 2H6l-1-2H2z"/>
+  </symbol>
+  <symbol id="wep-awp" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M2 11h6l1-3h3l1 3h6l2-1v-2h2v6h-2v-2l-2 1h-2v3h-2v-3H9v4H7v-4H2z"/>
+    <circle cx="12" cy="6" r="2.2"/>
+  </symbol>
+  <symbol id="wep-scout" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M2 11h16l3-1V9h2v5h-2v-1l-3 1h-2v3h-2v-3H8v4H6v-4H2z"/>
+    <circle cx="11" cy="7" r="1.8"/>
+  </symbol>
+  <symbol id="wep-smg" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M4 10h11l2-2h3v2l-2 1v2h-3l-1 2h-2v-2H9v4H7v-4H5l-1-1z"/>
+  </symbol>
+  <symbol id="wep-shotgun" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M2 10h16v-2h4v2h-2v3h-2v-2h-2v2h-2l-1 2h-2v-2H8v3H6v-3H4l-2-1z"/>
+  </symbol>
+  <symbol id="wep-deagle" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M4 8h14v3h-3l-3 2v3h-2v-3l-2-1H6l-2-1z"/>
+  </symbol>
+  <symbol id="wep-glock" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M5 9h12v3h-4l-2 4H9l1-4H7l-2-1z"/>
+  </symbol>
+  <symbol id="wep-usp" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M5 9h11v3h-3l-3 4H8l1-4H6l-1-1z"/>
+    <rect x="16" y="9" width="3" height="1.5"/>
+  </symbol>
+  <symbol id="wep-knife" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M4 14 16 3l2 2-9 11H7l7-8-9 8z"/>
+    <path d="M6 16h5l-2 4H7z"/>
+  </symbol>
+  <symbol id="wep-he" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M11 3h2v2h-2z"/>
+    <path d="M9 5h6l1 2H8z"/>
+    <ellipse cx="12" cy="14" rx="5" ry="6"/>
+  </symbol>
+  <symbol id="wep-c4" viewBox="0 0 24 24" fill="currentColor">
+    <rect x="5" y="7" width="14" height="10" rx="1"/>
+    <rect x="8" y="10" width="8" height="4" fill="#000" opacity="0.35"/>
+    <circle cx="17" cy="6" r="1.4"/>
+  </symbol>
+</svg>

@@ -45,6 +45,62 @@ function makePlayerStats(players, won, teamStrength, opponentStrength, seed) {
   });
 }
 
+// Per-round timeline for a completed map. Purely derived from the final
+// score + team strengths — it does not affect the result — and feeds the
+// Win Probability and Round Equipment Value charts. `winProbA` is team A's
+// live win chance after each round; equipment values approximate the
+// standard CS economy (full buy / force / eco) from win-loss streaks.
+function economyValue(lossStreak, roundsWon) {
+  if (lossStreak >= 2) return 3500 + Math.min(roundsWon, 6) * 350;   // rebuilding / eco
+  if (lossStreak === 1) return 12500;                                 // force / half buy
+  return 22000 + (roundsWon % 3) * 1200;                              // full buy
+}
+
+function buildRoundTimeline(scoreA, scoreB, strengthA, strengthB, seed) {
+  const total = scoreA + scoreB;
+  const seq = [];
+  let a = 0;
+  let b = 0;
+  for (let i = 0; i < total; i += 1) {
+    const remainA = scoreA - a;
+    const remainB = scoreB - b;
+    let side;
+    if (remainA <= 0) side = 'B';
+    else if (remainB <= 0) side = 'A';
+    else {
+      const pull = (strengthA - strengthB) / 20 + (seededNoise(`${seed}-rt-${i}`) - 0.5);
+      side = pull >= 0 ? 'A' : 'B';
+    }
+    if (side === 'A') a += 1; else b += 1;
+    seq.push(side);
+  }
+
+  let cumA = 0;
+  let cumB = 0;
+  let lossStreakA = 0;
+  let lossStreakB = 0;
+  const rounds = [];
+  for (let i = 0; i < seq.length; i += 1) {
+    const equipA = economyValue(lossStreakA, cumA);
+    const equipB = economyValue(lossStreakB, cumB);
+    if (seq[i] === 'A') { cumA += 1; lossStreakA = 0; lossStreakB += 1; }
+    else { cumB += 1; lossStreakB = 0; lossStreakA += 1; }
+    const diff = cumA - cumB;
+    const winProbA = clamp(Math.round(50 + diff * 6 + (strengthA - strengthB) * 1.1), 4, 96);
+    rounds.push({
+      round: i + 1,
+      winner: seq[i],
+      scoreA: cumA,
+      scoreB: cumB,
+      winProbA,
+      winProbB: 100 - winProbA,
+      equipA,
+      equipB,
+    });
+  }
+  return rounds;
+}
+
 function selectPerformers(allStats) {
   const sortedKills = [...allStats].sort((a, b) => b.kills - a.kills);
   const sortedRating = [...allStats].sort((a, b) => b.rating - a.rating);
@@ -92,6 +148,13 @@ export function simulateMatch({ teamA, teamB, players = [], teamMapRatings = [],
       teamBStats,
       performers: selectPerformers([...teamAStats, ...teamBStats]),
       strengths: { teamA: strengthA, teamB: strengthB },
+      rounds: buildRoundTimeline(
+        score.winner === 'A' ? score.winnerRounds : score.loserRounds,
+        score.winner === 'B' ? score.winnerRounds : score.loserRounds,
+        strengthA.total,
+        strengthB.total,
+        `${teamA.teamId}-${teamB.teamId}-${map.key}-${maps.length}`,
+      ),
     });
   }
 
