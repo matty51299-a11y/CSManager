@@ -48,6 +48,18 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
   const latestNews = (gameState.inboxItems || []).slice(0, 4);
   const lastResult = (gameState.completedEvents || [])[0];
 
+  // Real series score for the featured event centrepiece — only when the
+  // featured event has actually been (or is being) played. A brand-new,
+  // unplayed next fixture has no score, so the score element is omitted.
+  const featuredIsLive = activeOrNextEvent && gameState.currentEventId === activeOrNextEvent.eventId;
+  const liveRecord = featuredIsLive ? gameState.teamRecords?.[gameState.selectedTeamId] : null;
+  const finishedRecord = lastResult && activeOrNextEvent && lastResult.eventId === activeOrNextEvent.eventId ? lastResult.userRecord : null;
+  const centreScore = finishedRecord
+    ? { wins: finishedRecord.wins, losses: finishedRecord.losses, label: 'Final Record' }
+    : liveRecord && (liveRecord.wins || liveRecord.losses)
+      ? { wins: liveRecord.wins, losses: liveRecord.losses, label: 'Series Record' }
+      : null;
+
   return (
     <div className="dashboard-page">
       {/* ---- Next match / event centrepiece ---- */}
@@ -70,6 +82,16 @@ export default function Dashboard({ gameState, advanceToNextEvent, enterEvent, r
                   <div className="nm-title">{activeOrNextEvent.name}</div>
                   <div className="nm-date">{formatDate(activeOrNextEvent.startDate)} — {formatDate(activeOrNextEvent.endDate)}</div>
                   <div className="nm-meta">{activeOrNextEvent.eventType || 'Tournament'} · {activeOrNextEvent.tier} Tier · Top {activeOrNextEvent.teams || 16}</div>
+                  {centreScore && (
+                    <>
+                      <div className="nm-score">
+                        <span className="nm-score-a">{centreScore.wins}</span>
+                        <span className="nm-score-sep">vs</span>
+                        <span className="nm-score-b">{centreScore.losses}</span>
+                      </div>
+                      <div className="nm-score-label">{centreScore.label}</div>
+                    </>
+                  )}
                   <div className="inline-actions" style={{ justifyContent: 'center', marginTop: 10 }}>
                     {!gameState.currentPhase.startsWith('event_active') && gameState.currentPhase !== 'event_ready' && (
                       <button onClick={advanceToNextEvent}>Advance To Event</button>
