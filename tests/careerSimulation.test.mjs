@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { CAREER_START_DATE, formatDate } from '../src/utils/calendarDates.js';
 import { advanceOneDay, getDaysUntil } from '../src/utils/careerClock.js';
-import { generateInitialFixtures, getPrimaryCareerAction, processDailySimulation, simulateFixture } from '../src/utils/careerSimulation.js';
+import { generateInitialFixtures, getPendingUserMatchResult, getPrimaryCareerAction, getTodayUserFixture, getUserFixtures, processDailySimulation, simulateFixture } from '../src/utils/careerSimulation.js';
 import { simulateMatch } from '../src/utils/matchEngine.js';
 
 const teams = [
@@ -43,12 +43,35 @@ assert.ok(match.maps[0].teamAStats[0].rating > 0);
 
 s = state('2026-01-13');
 s.fixtures = [{ id:'f1', tournamentId:'blast_bounty_s1', scheduledDate:'2026-01-13', bestOf:3, teamAId:'team_vitality', teamBId:'betboom', userTeamInvolved:true, simulated:false, status:'scheduled', round:'Group Stage - Match 2' }];
-let out = simulateFixture(s, 'f1', initialData);
+let out = simulateFixture(s, 'f1', initialData, { userInitiated:true });
 assert.ok(out.result.winner);
 assert.ok(out.result.playerStatistics.every((row) => row.rating >= 0.6));
 assert.equal(out.state.matchResults.length, 1);
 out = simulateFixture(out.state, 'f1', initialData);
 assert.equal(out.error, 'Match already completed.');
+
+// User fixture ownership regressions.
+{
+  let own = state('2026-01-13');
+  own.fixtures = [
+    { id:'ai-due', tournamentId:'blast_bounty_s1', scheduledDate:'2026-01-13', bestOf:3, teamAId:'spirit', teamBId:'mouz', userTeamInvolved:false, simulated:false, status:'scheduled', round:'AI Match' },
+    { id:'user-due', tournamentId:'blast_bounty_s1', scheduledDate:'2026-01-13', bestOf:3, teamAId:'team_vitality', teamBId:'betboom', userTeamInvolved:true, simulated:false, status:'scheduled', round:'User Match' },
+  ];
+  assert.equal(getPrimaryCareerAction(own).type, 'PLAY_MATCH');
+  assert.equal(getTodayUserFixture(own).id, 'user-due');
+  assert.equal(getUserFixtures(own).length, 1);
+  const rejected = simulateFixture(own, 'ai-due', initialData, { userInitiated:true });
+  assert.equal(rejected.error, 'Cannot manually play an AI-controlled fixture.');
+  assert.equal(rejected.state.matchResults.length, 0);
+  const aiSim = simulateFixture(own, 'ai-due', initialData, { userInitiated:false });
+  assert.equal(aiSim.state.pendingMatchResultId || null, null);
+  assert.equal(aiSim.state.matchResults[0].acknowledged, true);
+  assert.equal(getPendingUserMatchResult(aiSim.state), null);
+  const userSim = simulateFixture(aiSim.state, 'user-due', initialData, { userInitiated:true });
+  assert.equal(userSim.state.pendingMatchResultId, 'user-due');
+  assert.equal(getPendingUserMatchResult(userSim.state).fixtureId, 'user-due');
+}
+
 console.log('career simulation tests passed');
 
 const { createServer } = await import('vite');
@@ -59,7 +82,7 @@ const { MemoryRouter } = await import('react-router-dom');
 const vite = await createServer({ server: { middlewareMode: true }, appType: 'custom', logLevel: 'error' });
 try {
   const { default: Dashboard } = await vite.ssrLoadModule('/src/pages/Dashboard.jsx');
-  const { generateInitialFixtures, getNextFixture } = await import('../src/utils/careerSimulation.js');
+  const { generateInitialFixtures, getNextUserFixture } = await import('../src/utils/careerSimulation.js');
 
   const events = [
     { eventId: 'blast_bounty_s1', name: 'BLAST Bounty Season 1', tier: 'A', teams: 4, startDate: '2026-01-08', endDate: '2026-01-18', prizePool: 500000, eventType: 'LAN' },
@@ -87,7 +110,7 @@ try {
       matchResults: [],
     };
     const merged = { ...base, ...overrides };
-    return { ...merged, nextFixture: getNextFixture(merged), primaryCareerAction: getPrimaryCareerAction(merged) };
+    return { ...merged, nextFixture: getNextUserFixture(merged), primaryCareerAction: getPrimaryCareerAction(merged) };
   }
 
   function renderDashboard(gameState) {
@@ -99,14 +122,14 @@ try {
 
   let advanced = dashboardState({ currentDate: '2026-01-01' });
   for (let i = 0; i < 8; i += 1) advanced = { ...processDailySimulation(advanced, initialData), teams, players, events, rankings, completedEvents: [] };
-  assert.doesNotThrow(() => renderDashboard({ ...advanced, nextFixture: getNextFixture(advanced), primaryCareerAction: getPrimaryCareerAction(advanced) }));
+  assert.doesNotThrow(() => renderDashboard({ ...advanced, nextFixture: getNextUserFixture(advanced), primaryCareerAction: getPrimaryCareerAction(advanced) }));
 
   const aiFixture = { id:'ai1', tournamentId:'blast_bounty_s1', scheduledDate:'2026-01-08', bestOf:3, teamAId:'spirit', teamBId:'mouz', userTeamInvolved:false, simulated:true, status:'completed' };
   assert.doesNotThrow(() => renderDashboard(dashboardState({ fixtures: [aiFixture, ...generated.fixtures] })));
 
   const migrated = dashboardState({ fixtures: [undefined, { id:'bad1' }, { id:'bad2', scheduledDate:'bad-date', teamAId:null, status:'scheduled' }, ...generated.fixtures] });
   assert.doesNotThrow(() => renderDashboard(migrated));
-  assert.equal(getNextFixture({ currentDate:'2026-01-08', selectedTeamId:'team_vitality', fixtures:[undefined, { id:'bad' }, ...generated.fixtures] })?.id, 'fixture-blast-bounty-s1-semifinal-1-team-vitality-betboom');
+  assert.equal(getNextUserFixture({ currentDate:'2026-01-08', selectedTeamId:'team_vitality', fixtures:[undefined, { id:'bad' }, ...generated.fixtures] })?.id, 'fixture-blast-bounty-s1-semifinal-1-team-vitality-betboom');
 
   let actionState = dashboardState({ currentDate: '2026-01-01' });
   for (let i = 0; i < 7; i += 1) actionState = { ...processDailySimulation(actionState, initialData), teams, players, events, rankings, completedEvents: [] };
@@ -122,12 +145,12 @@ try {
   const generated = generateInitialFixtures({ events, rankings: teams.map((t,i)=>({...t, rank:i+1, vrsPoints:1000-i})), teams, selectedTeamId:'team_vitality' });
   let st = { ...state('2026-01-03'), fixtures: generated.fixtures, calendarEvents: generated.calendarEvents, tournaments: generated.tournaments };
   assert.equal(st.fixtures.filter((f)=>f.stageId==='semifinal').length, 2);
-  st = simulateFixture(st, st.fixtures[0].id, { ...initialData, events }).state;
-  st = simulateFixture(st, st.fixtures[1].id, { ...initialData, events }).state;
+  st = simulateFixture(st, st.fixtures[0].id, { ...initialData, events }, { userInitiated:false }).state;
+  st = simulateFixture(st, st.fixtures[1].id, { ...initialData, events }, { userInitiated:false }).state;
   assert.equal(st.fixtures.filter((f)=>f.stageId==='final').length, 1);
   const finalId = st.fixtures.find((f)=>f.stageId==='final').id;
   st.currentDate = st.fixtures.find((f)=>f.id===finalId).scheduledDate;
-  st = simulateFixture(st, finalId, { ...initialData, events }).state;
+  st = simulateFixture(st, finalId, { ...initialData, events }, { userInitiated:false }).state;
   assert.equal(st.tournaments.cup.status, 'completed');
   assert.ok(st.tournaments.cup.champion);
   const again = simulateFixture(st, finalId, { ...initialData, events });
@@ -140,7 +163,7 @@ try {
   const events = [{ eventId:'groups', name:'Groups Cup', teams:4, startDate:'2026-01-03', endDate:'2026-01-10', format:'two_groups_to_playoffs', prizePool:100000, rankingWeight:50 }];
   const generated = generateInitialFixtures({ events, rankings: teams.map((t,i)=>({...t, rank:i+1, vrsPoints:1000-i})), teams, selectedTeamId:'team_vitality' });
   let st = { ...state('2026-01-03'), fixtures: generated.fixtures, calendarEvents: generated.calendarEvents, tournaments: generated.tournaments };
-  for (const f of st.fixtures.filter((x)=>x.stageId==='group')) st = simulateFixture(st, f.id, { ...initialData, events }).state;
+  for (const f of st.fixtures.filter((x)=>x.stageId==='group')) st = simulateFixture(st, f.id, { ...initialData, events }, { userInitiated:false }).state;
   assert.ok(Object.values(st.tournaments.groups.groupTables).every((table)=>table.rows.every((row)=>row.played >= 1 && row.position > 0)));
   assert.ok(st.fixtures.some((f)=>f.stageId==='semifinal' || f.stageId==='final'));
 }
