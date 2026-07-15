@@ -4,6 +4,15 @@ import TrendLine from '../components/charts/TrendLine';
 import ComparisonBars from '../components/charts/ComparisonBars';
 import DeltaChip from '../components/charts/DeltaChip';
 import { CHART } from '../components/charts/palette';
+import { MapThumb, WeaponIcon } from '../components/fm';
+
+// Pick a round-history weapon icon from the winning side's economy that round.
+function weaponForRound(round) {
+  const equip = round.winner === 'A' ? round.equipA : round.equipB;
+  if (equip < 6000) return round.winner === 'A' ? 'usp' : 'glock';
+  if (equip < 14000) return 'smg';
+  return round.winner === 'A' ? 'm4' : 'ak';
+}
 
 // Sum a per-player stat across every map for one side of the series.
 function sumStat(maps, side, key) {
@@ -108,6 +117,25 @@ export default function MatchCentre({ gameState }) {
             <div><span className="muted">Format</span><strong>Bo{result.bestOf}</strong></div>
           </div>
 
+          <div className="panel">
+            <div className="panel-header"><h2>Maps</h2></div>
+            <div className="panel-body">
+              <div className="mapthumb-strip">
+                {result.maps.map((map) => (
+                  <div className="mapthumb-item" key={`${map.mapKey}-thumb`}>
+                    <MapThumb mapKey={map.mapKey} mapName={map.mapName} width={132} height={78} />
+                    <div className="mapthumb-score">
+                      <span style={{ color: CHART.teamA }}>{map.scoreA}</span>
+                      <i>–</i>
+                      <span style={{ color: CHART.teamB }}>{map.scoreB}</span>
+                    </div>
+                    <div className="muted" style={{ textAlign: 'center' }}>{map.winnerName}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <div className="grid-2">
             <div className="panel">
               <div className="panel-header"><h2>Veto / Picks</h2></div>
@@ -176,6 +204,14 @@ export default function MatchCentre({ gameState }) {
                         tooltipFormatter={(v) => `$${v.toLocaleString()}`}
                       />
                     </div>
+                  </div>
+                  <div className="chart-note">Round Win History</div>
+                  <div className="round-history">
+                    {map.rounds.map((round) => (
+                      <div className={`round-cell ${round.winner === 'A' ? 'win-a' : 'win-b'}`} key={round.round} title={`Round ${round.round}: ${round.winner === 'A' ? teamA.shortName : teamB.shortName}`}>
+                        <WeaponIcon name={weaponForRound(round)} size={14} />
+                      </div>
+                    ))}
                   </div>
                   {first && last && (
                     <div style={{ maxWidth: 320, marginTop: 12 }}>

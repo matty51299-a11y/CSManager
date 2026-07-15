@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { formatMoney } from '../utils/helpers';
-import { Crest } from '../components/fm';
+import { PlayerAvatar, NatChip } from '../components/fm';
 import Sparkline from '../components/charts/Sparkline';
 import DeltaChip from '../components/charts/DeltaChip';
 import { CHART } from '../components/charts/palette';
@@ -86,9 +86,9 @@ export default function Transfers({ gameState }) {
             <tbody>
               {myPlayers.map((p) => (
                 <tr key={p.playerId} className="your-player-row clickable-row">
-                  <td style={{ display: 'flex', alignItems: 'center', gap: 7 }}><Crest team={myTeam} size={16} /><Link to={`/players/${p.playerId}`}>{p.gamertag}</Link></td>
+                  <td style={{ display: 'flex', alignItems: 'center', gap: 8 }}><PlayerAvatar player={p} size={24} /><Link to={`/players/${p.playerId}`}>{p.gamertag}</Link></td>
                   <td>{p.rolePrimary}</td>
-                  <td><span className="fm-nat">{p.country || p.nationality || '—'}</span></td>
+                  <td><NatChip country={p.nationality} /></td>
                   <td className="text-right">{p.overall}</td>
                   <td className="text-right">{formatMoney(p.salary || 0)}</td>
                 </tr>

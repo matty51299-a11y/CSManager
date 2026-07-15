@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { OvrBadge } from '../components/StatBadge';
+import { PlayerAvatar, NatChip } from '../components/fm';
 import { formatMoney } from '../utils/helpers';
 
 export default function Players({ gameState }) {
@@ -56,10 +57,10 @@ export default function Players({ gameState }) {
           <tbody>
             {sorted.map((p) => (
               <tr key={p.playerId + p.teamId}>
-                <td><Link to={`/players/${p.playerId}`}>{p.gamertag}</Link></td>
+                <td><span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><PlayerAvatar player={p} size={22} /><Link to={`/players/${p.playerId}`}>{p.gamertag}</Link></span></td>
                 <td><Link to={`/teams/${p.teamId}`}>{teamMap[p.teamId] || 'FA'}</Link></td>
                 <td style={{ color: 'var(--text-secondary)' }}>{p.rolePrimary}</td>
-                <td>{p.nationality}</td>
+                <td><NatChip country={p.nationality} /></td>
                 <td className="text-right">{p.age}</td>
                 <td className="text-right"><OvrBadge value={p.overall} /></td>
                 <td className="text-right"><OvrBadge value={p.potential} /></td>

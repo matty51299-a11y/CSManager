@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import TopNav from './components/TopNav';
+import WeaponSprite from './components/WeaponSprite';
 import ErrorBoundary from './components/ErrorBoundary';
 import Dashboard from './pages/Dashboard';
 import Teams from './pages/Teams';
@@ -52,6 +53,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <WeaponSprite />
       <div className={inEventMode ? 'fm-shell event-app-mode' : 'fm-shell'}>
         {!inEventMode && <TopNav gameState={gameState} actions={actions} />}
         <div className={inEventMode ? 'app-layout event-app-mode' : 'app-layout'}>
