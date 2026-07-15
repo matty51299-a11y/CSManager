@@ -5,6 +5,8 @@ import ComparisonBars from '../components/charts/ComparisonBars';
 import DeltaChip from '../components/charts/DeltaChip';
 import { CHART } from '../components/charts/palette';
 import { MapThumb, WeaponIcon } from '../components/fm';
+import MapVetoStrip from '../components/MapVetoStrip';
+import KillHeatmap from '../components/KillHeatmap';
 
 // Pick a round-history weapon icon from the winning side's economy that round.
 function weaponForRound(round) {
@@ -136,24 +138,20 @@ export default function MatchCentre({ gameState }) {
             </div>
           </div>
 
-          <div className="grid-2">
-            <div className="panel">
-              <div className="panel-header"><h2>Veto / Picks</h2></div>
-              <div className="panel-body">
-                <table>
-                  <thead><tr><th>Step</th><th>Team</th><th>Map</th></tr></thead>
-                  <tbody>{result.veto.steps.map((item, index) => <tr key={`${item.action}-${item.mapKey}-${index}`}><td>{item.action}</td><td>{item.teamName}</td><td>{item.mapName}</td></tr>)}</tbody>
-                </table>
-              </div>
+          <div className="panel">
+            <div className="panel-header"><h2>Map Veto</h2><span className="muted">Bo{result.bestOf}</span></div>
+            <div className="panel-body">
+              <MapVetoStrip steps={result.veto.steps} teamA={teamA} teamB={teamB} />
             </div>
-            <div className="panel">
-              <div className="panel-header"><h2>Map Scores</h2></div>
-              <div className="panel-body">
-                <table>
-                  <thead><tr><th>Map</th><th>{teamA.shortName}</th><th>{teamB.shortName}</th><th>Winner</th></tr></thead>
-                  <tbody>{result.maps.map((map) => <tr key={map.mapKey}><td>{map.mapName}</td><td>{map.scoreA}</td><td>{map.scoreB}</td><td>{map.winnerName}</td></tr>)}</tbody>
-                </table>
-              </div>
+          </div>
+
+          <div className="panel">
+            <div className="panel-header"><h2>Map Scores</h2></div>
+            <div className="panel-body">
+              <table>
+                <thead><tr><th>Map</th><th>{teamA.shortName}</th><th>{teamB.shortName}</th><th>Winner</th></tr></thead>
+                <tbody>{result.maps.map((map) => <tr key={map.mapKey}><td>{map.mapName}</td><td>{map.scoreA}</td><td>{map.scoreB}</td><td>{map.winnerName}</td></tr>)}</tbody>
+              </table>
             </div>
           </div>
 
@@ -218,6 +216,8 @@ export default function MatchCentre({ gameState }) {
                       <DeltaChip label={`${teamA.shortName} Win Probability Swing`} before={first.winProbA} after={last.winProbA} unit="%" />
                     </div>
                   )}
+                  <div className="chart-note" style={{ marginTop: 14 }}>Kill Heatmap</div>
+                  <KillHeatmap map={map} teamA={teamA} teamB={teamB} />
                 </div>
               </div>
             );
