@@ -17,10 +17,12 @@ import TournamentCentre from './pages/TournamentCentre';
 import StartCareer from './pages/StartCareer';
 import Inbox from './pages/Inbox';
 import Transfers from './pages/Transfers';
+import Fixtures from './pages/Fixtures';
 import EventHub from './pages/EventHub';
 import EventReadyModal from './components/EventReadyModal';
 import { useGameState } from './state';
-import { PreMatchModal, ResultModal } from './components/MatchModals';
+import { PreMatchModal } from './components/MatchModals';
+import MatchReportModal from './components/MatchReportModal';
 import { useState } from 'react';
 import { isUserFixture } from './utils/careerSimulation';
 
@@ -73,6 +75,7 @@ export default function App() {
               <Route path="/calendar" element={<Calendar gameState={gameState} advanceToNextEvent={actions.advanceToNextEvent} enterEvent={actions.enterEvent} />} />
               <Route path="/inbox" element={<Inbox gameState={gameState} />} />
               <Route path="/transfers" element={<Transfers gameState={gameState} />} />
+              <Route path="/fixtures" element={<Fixtures gameState={gameState} />} />
               <Route path="/event-hub" element={<EventHubRoute gameState={gameState} actions={actions} />} />
               <Route path="/tournaments/:tournamentId" element={<TournamentDetail gameState={gameState} />} />
               <Route path="/roster" element={<Roster gameState={gameState} />} />
@@ -89,7 +92,7 @@ export default function App() {
             }} viewCalendar={() => { window.history.pushState(null, '', '/calendar'); window.dispatchEvent(new PopStateEvent('popstate')); }} />}
           </ErrorBoundary>
             <PreMatchModal gameState={gameState} fixture={(gameState.fixtures || []).find((f) => f.id === preMatchFixtureId && isUserFixture(f, gameState.selectedTeamId))} onClose={() => setPreMatchFixtureId(null)} onPlay={(fixtureId) => { actions.playFixture(fixtureId); setPreMatchFixtureId(null); }} />
-            <ResultModal gameState={gameState} result={gameState.pendingMatchResult} onClose={actions.acknowledgeMatchResult} onTournament={() => { const tid = gameState.pendingMatchResult?.tournamentId; actions.acknowledgeMatchResult(); window.history.pushState(null, '', `/tournaments/${tid}`); window.dispatchEvent(new PopStateEvent('popstate')); }} />
+            {gameState.pendingMatchResult && <MatchReportModal match={gameState.pendingMatchResult} onClose={actions.acknowledgeMatchResult} onViewTournament={() => { const tid = gameState.pendingMatchResult?.tournamentId; actions.acknowledgeMatchResult(); window.history.pushState(null, '', `/tournaments/${tid}`); window.dispatchEvent(new PopStateEvent('popstate')); }} />}
         </main>
         </div>
       </div>
