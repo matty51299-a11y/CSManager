@@ -159,7 +159,7 @@ export function simulateFixture(state, fixtureId, initialData, options = {}) {
   const mvp = [...stats].sort((a,b)=>b.rating-a.rating)[0];
   const event = initialData.events.find((e)=>e.eventId===fixture.tournamentId);
   const userMatch = isUserFixture(fixture, state.selectedTeamId);
-  const matchRecord = { id: fixture.id, fixtureId: fixture.id, tournamentId: fixture.tournamentId, tournamentName: event?.name || 'Tournament', stage: fixture.round, date: fixture.scheduledDate, bestOf: fixture.bestOf, teamA, teamB, winner: result.winner, loser: result.winner.teamId === teamA.teamId ? teamB : teamA, seriesScore: result.seriesScore, maps: result.maps, playerStatistics: stats, matchMvp: mvp, acknowledged: !userMatch };
+  const matchRecord = { id: fixture.id, fixtureId: fixture.id, tournamentId: fixture.tournamentId, tournamentName: event?.name || 'Tournament', stage: fixture.round, date: fixture.scheduledDate, bestOf: fixture.bestOf, teamA, teamB, winner: result.winner, loser: result.winner.teamId === teamA.teamId ? teamB : teamA, seriesScore: result.seriesScore, maps: result.maps, veto: result.veto, playerStatistics: stats, matchMvp: mvp, acknowledged: !userMatch };
   let fixtures = state.fixtures.map((f)=>f.id===fixture.id?{...f,status:'completed',simulated:true,result:matchRecord,mapScores:result.maps,playerStatistics:stats}:f);
   let calendarEvents = (state.calendarEvents||[]).map((e)=>e.relatedMatchId===fixture.id?{...e,resolved:true,blocksProgression:false,requiresUserAction:false}:e);
   let tournaments = state.tournaments || {};
